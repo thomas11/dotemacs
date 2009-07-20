@@ -1,0 +1,200 @@
+This is the directory file `dir' a.k.a. `DIR', which contains the
+topmost node of the Info hierarchy.
+
+File: dir,	Node: Top,	This is the top of the INFO tree.
+
+This is the Info main menu (aka directory node).
+A few useful Info commands:
+
+  `q' quits;
+  `?' lists all Info commands;
+  `d' returns here;
+  `h' starts the Info tutorial;
+  `mTexinfo RET' visits the Texinfo manual, etc.
+
+* Menu:
+
+C++ libraries
+* autosprintf: (autosprintf).		Support for printf format strings in
+					C++.
+
+Archiving
+* Tar: (tar).				Making tape (or disk) archives.
+
+Programming & development tools
+* GDBM: (gdbm). 			The GNU database manager.
+* MikMod: (mikmod).			MikMod Sound Library.
+
+GNU Gettext Utilities
+* gettext: (gettext).			GNU gettext utilities.
+* autopoint: (gettext)autopoint Invocation.
+					Copy gettext infrastructure.
+* envsubst: (gettext)envsubst Invocation.
+					Expand environment variables.
+* gettextize: (gettext)gettextize Invocation.
+					Prepare a package for gettext.
+* msgattrib: (gettext)msgattrib Invocation.
+					Select part of a PO file.
+* msgcat: (gettext)msgcat Invocation.	Combine several PO files.
+* msgcmp: (gettext)msgcmp Invocation.	Compare a PO file and template.
+* msgcomm: (gettext)msgcomm Invocation. Match two PO files.
+* msgconv: (gettext)msgconv Invocation. Convert PO file to encoding.
+* msgen: (gettext)msgen Invocation.	Create an English PO file.
+* msgexec: (gettext)msgexec Invocation. Process a PO file.
+* msgfilter: (gettext)msgfilter Invocation.
+					Pipe a PO file through a filter.
+* msgfmt: (gettext)msgfmt Invocation.	Make MO files out of PO files.
+* msggrep: (gettext)msggrep Invocation. Select part of a PO file.
+* msginit: (gettext)msginit Invocation. Create a fresh PO file.
+* msgmerge: (gettext)msgmerge Invocation.
+					Update a PO file from template.
+* msgunfmt: (gettext)msgunfmt Invocation.
+					Uncompile MO file into PO file.
+* msguniq: (gettext)msguniq Invocation. Unify duplicates for PO file.
+* ngettext: (gettext)ngettext Invocation.
+					Translate a message with plural.
+* xgettext: (gettext)xgettext Invocation.
+					Extract strings into a PO file.
+* ISO639: (gettext)Language Codes.	ISO 639 language codes.
+* ISO3166: (gettext)Country Codes.	ISO 3166 country codes.
+
+GNU libraries
+* gmp: (gmp).				GNU Multiple Precision Arithmetic
+					Library.
+* libgcrypt: (gcrypt).			Cryptographic function library.
+* libtasn1: (libtasn1). 		Library for Abstract Syntax Notation
+					One (ASN.1).
+
+Software libraries
+* mpfr: (mpfr). 			Multiple Precision Floating-Point
+					Reliable Library.
+
+Libraries
+* AA-lib: (aalib).			An ASCII-art graphics library
+* History: (history).			The GNU history library API.
+* libIDL2: (libIDL2).			Interface Definition Language parsing
+					library.
+* Readline: (readline). 		The GNU readline library API.
+* RLuserman: (rluserman).		The GNU readline library User's
+					Manual.
+
+Texinfo documentation system
+* DVI-to-Postscript: (dvips).		Translating TeX DVI files to
+					PostScript.
+* afm2tfm: (dvips)Invoking afm2tfm.	Making Type 1 fonts available to TeX.
+* dvips: (dvips)Invoking Dvips. 	DVI-to-PostScript translator.
+* LaTeX2e: (latex).			LaTeXe help 1.6.
+* Web2c: (web2c).			TeX, Metafont, and companion programs.
+* bibtex: (web2c)bibtex invocation.	Maintaining bibliographies.
+* dmp: (web2c)dmp invocation.		Troff->MPX (MetaPost pictures).
+* dvicopy: (web2c)dvicopy invocation.	Virtual font expansion
+* dvitomp: (web2c)dvitomp invocation.	DVI to MPX (MetaPost pictures).
+* dvitype: (web2c)dvitype invocation.	DVI to human-readable text.
+* gftodvi: (web2c)gftodvi invocation.	Generic font proofsheets.
+* gftopk: (web2c)gftopk invocation.	Generic to packed fonts.
+* gftype: (web2c)gftype invocation.	GF to human-readable text.
+* makempx: (web2c)makempx invocation.	MetaPost label typesetting.
+* mf: (web2c)mf invocation.		Creating typeface families.
+* mft: (web2c)mft invocation.		Prettyprinting Metafont source.
+* mltex: (web2c)MLTeX.			Multi-lingual TeX.
+* mpost: (web2c)mpost invocation.	Creating technical diagrams.
+* mpto: (web2c)mpto invocation. 	MetaPost label extraction.
+* newer: (web2c)newer invocation.	Compare modification times.
+* patgen: (web2c)patgen invocation.	Creating hyphenation patterns.
+* pktogf: (web2c)pktogf invocation.	Packed to generic fonts.
+* pktype: (web2c)pktype invocation.	PK to human-readable text.
+* pltotf: (web2c)pltotf invocation.	Property list to TFM.
+* pooltype: (web2c)pooltype invocation. Display WEB pool files.
+* tangle: (web2c)tangle invocation.	WEB to Pascal.
+* tex: (web2c)tex invocation.		Typesetting.
+* tftopl: (web2c)tftopl invocation.	TFM -> property list.
+* vftovp: (web2c)vftovp invocation.	Virtual font -> virtual pl.
+* vptovf: (web2c)vptovf invocation.	Virtual pl -> virtual font.
+* weave: (web2c)weave invocation.	WEB to TeX.
+* Kpathsea: (kpathsea). 		File lookup along search paths.
+* kpsewhich: (kpathsea)Invoking kpsewhich.
+					TeX file searching.
+* mktexmf: (kpathsea)mktex scripts.	MF source generation.
+* mktexpk: (kpathsea)mktex scripts.	PK bitmap generation.
+* mktextex: (kpathsea)mktex scripts.	TeX source generation.
+* mktextfm: (kpathsea)mktex scripts.	TeX font metric generation.
+* mktexlsr: (kpathsea)Filename database.
+					Update ls-R.
+* Info: (info). 			How to use the documentation browsing
+					system.
+* info standalone: (info-stnd). 	Read Info documents without Emacs.
+* infokey: (info-stnd)Invoking infokey. Compile Info customizations.
+* Texi2html: (texi2html).		Texinfo to HTML Converter.
+* Texinfo: (texinfo).			The GNU documentation format.
+* install-info: (texinfo)Invoking install-info.
+					Update info/dir entries.
+* texi2dvi: (texinfo)Format with texi2dvi.
+					Print Texinfo documents.
+* texi2pdf: (texinfo)PDF Output.	PDF output for Texinfo.
+* pdftexi2dvi: (texinfo)PDF Output.	PDF output for Texinfo.
+* texindex: (texinfo)Format with tex/texindex.
+					Sort Texinfo index files.
+* makeinfo: (texinfo)Invoking makeinfo. Translate Texinfo source.
+
+GNU Packages
+* Aspell: (aspell).			GNU Aspell spelling checker
+* Aspell-dev: (aspell-dev).		For Aspell developers
+* Make: (make). 			Remake files automatically.
+
+Text creation and manipulation
+* Gawk: (gawk). 			`awk', a program that you can use to
+					select particular records in a file
+					and perform operations upon them.
+* M4: (m4).				A powerful macro processor.
+
+Software development
+* Automake: (automake). 		Making GNU standards-compliant
+					Makefiles.
+* bison: (bison).			GNU parser generator (Yacc
+					replacement).
+* gcc: (gcc).				The GNU Compiler Collection.
+* g++: (gcc).				The GNU C++ compiler.
+* Autoconf: (autoconf). 		Create source code configuration
+					scripts.
+* Cpp: (cpp).				The GNU C preprocessor.
+* Cpplib: (cppinternals).		Cpplib internals.
+* gccinstall: (gccinstall).		Installing the GNU Compiler
+					Collection.
+* gccint: (gccint).			Internals of the GNU Compiler
+					Collection.
+* Gcj: (gcj).				Ahead-of-time compiler for the Java
+					language
+* gfortran: (gfortran). 		The GNU Fortran Compiler.
+
+GNU organization
+* Standards: (standards).		GNU coding standards.
+
+Network applications
+* Gawkinet: (gawkinet). 		The networking features in GNU `awk'.
+* Wget: (wget). 			The non-interactive network
+					downloader.
+
+Library of useful routines for 'C' programing
+* GLIB: (glib). 			Useful routines for 'C' programming
+
+Programming Tools
+* Gperf: (gperf).			Perfect Hash Function Generator.
+
+Scientific software
+* gsl-ref: (gsl-ref).			GNU Scientific Library - Reference
+
+Programming Languages
+* ocaml: (ocaml).			The Objective Caml compiler and
+					programming environment
+
+GNU programming tools
+* Libtool: (libtool).			GNU Libtool 2.2.6
+
+EmacsINFO-DIR-SECTION TeX
+* AUCTeX: (auctex).			A sophisticated TeX environment for
+					Emacs.
+
+Miscellaneous:
+* Gzip: (gzip). 			The the GNU `gzip' command for
+					compressing files.
+* mysql: (mysql).			MySQL documentation.
