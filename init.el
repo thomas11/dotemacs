@@ -84,6 +84,13 @@
 (require 'itunes)
 
 
+(require 'wpmail)
+(add-to-list 'auto-mode-alist '("\\.wp$" . wpmail))
+(add-to-list 'auto-mode-alist '("\\.wordpress$" . wpmail))
+(add-to-list 'auto-mode-alist '("\\.wp.md$" . wpmail))
+(add-to-list 'auto-mode-alist '("\\.wp.markdown$" . wpmail))
+
+
 ;; JavaScript mode by Steve Yegge
 ;; 2009-04-18 from http://code.google.com/p/js2-mode/
 (autoload 'js2-mode "js2" nil t)
