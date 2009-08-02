@@ -16,6 +16,17 @@
       (quote ("/sw/share/info" "/Users/thomas/.emacs.d/usr/share/info")))
 
 
+;; 2009-08-02: If we're on Mac OS, set the path, as Mac OS doesn't
+;; pass it on to apps launched from the finder or the dock by default;
+;; see <http://www.emacswiki.org/emacs/MacOSTweaks>
+(if (string-match "darwin" system-configuration)
+    (progn
+      (setenv "PATH"
+	      (concat (getenv "PATH")	":/usr/local/bin"))
+      (setq exec-path 
+	    (append exec-path '("/usr/local/bin")))))
+
+
 ;; Save backups in one place instead of clobbering the disk.
 ;; 2009-04-20 from http://www.emacswiki.org/emacs/BackupDirectory
 (setq
@@ -75,6 +86,11 @@
 
 ;; 2009-07-20 from http://www.adamspiers.org/elisp/smooth-scrolling.el
 (require 'smooth-scrolling)
+
+
+;; 2009-07-25
+(require 'uniquify)
+(setq uniquify-buffer-name-style 'post-forward)
 
 
 ;; MODES
