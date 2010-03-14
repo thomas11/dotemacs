@@ -21,6 +21,10 @@ C++ libraries
 Archiving
 * Tar: (tar).				Making tape (or disk) archives.
 
+Emacs
+* VM: (vm).                     A mail reader.
+* VM-pcrisis: (vm-pcrisis).     A personality crisis solver for VM
+
 Programming & development tools
 * GDBM: (gdbm). 			The GNU database manager.
 * MikMod: (mikmod).			MikMod Sound Library.
