@@ -74,7 +74,7 @@
 (setq kill-whole-line t) ; C-k deletes the end of line
 (setq woman-use-own-frame nil)
 (setq-default indent-tabs-mode nil) ; no tabs
-
+(ffap-bindings) ; find-file-at-point
 
 ;; 2009-11-14 md-readme. List emacs projects on github so they are set
 ;; up for auto-generating their README.md.
