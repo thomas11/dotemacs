@@ -312,7 +312,7 @@ line."
   (add-to-list 'auto-mode-alist `(,suffix . markdown-mode)))
 (defun markdown-custom ()
   "markdown-mode-hook"
-  (setq markdown-command "Markdown.pl | SmartyPants.pl")
+  (setq markdown-command "Markdown.pl | SmartyPants.pl -2")
   (auto-fill-mode))
 (add-hook 'markdown-mode-hook '(lambda() (markdown-custom)))
 
