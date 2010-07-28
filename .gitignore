@@ -4,3 +4,4 @@ elisp/wpmail.el
 usr/share/doc/auctex/tex-ref.pdf
 auto-save-list
 tramp
+session.*
