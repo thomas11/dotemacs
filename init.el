@@ -255,6 +255,11 @@ line."
 (require 'wpmail)
 
 
+;;; ERLANG ;;;
+
+(require 'erlang-start)
+
+
 ;;; JAVASCRIPT ;;;
 
 ;; JavaScript mode by Steve Yegge
