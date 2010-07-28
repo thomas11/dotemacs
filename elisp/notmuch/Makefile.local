@@ -1,0 +1,40 @@
+# -*- makefile -*-
+
+dir := emacs
+emacs_sources := \
+	$(dir)/notmuch-lib.el \
+	$(dir)/notmuch.el \
+	$(dir)/notmuch-query.el \
+	$(dir)/notmuch-show.el \
+	$(dir)/notmuch-wash.el \
+	$(dir)/notmuch-hello.el \
+	$(dir)/notmuch-mua.el \
+	$(dir)/notmuch-address.el \
+	$(dir)/notmuch-maildir-fcc.el \
+	$(dir)/notmuch-message.el \
+	$(dir)/coolj.el
+
+emacs_images := \
+	$(dir)/notmuch-logo.png
+
+emacs_bytecode := $(subst .el,.elc,$(emacs_sources))
+
+%.elc: %.el
+	$(call quiet,EMACS) --directory emacs -batch -f batch-byte-compile $<
+
+ifeq ($(HAVE_EMACS),1)
+all: $(emacs_bytecode)
+endif
+
+install: install-emacs
+
+.PHONY: install-emacs
+install-emacs:
+	mkdir -p $(DESTDIR)$(emacslispdir)
+	install -m0644 $(emacs_sources) $(DESTDIR)$(emacslispdir)
+ifeq ($(HAVE_EMACS),1)
+	install -m0644 $(emacs_bytecode) $(DESTDIR)$(emacslispdir)
+endif
+	install -m0644 $(emacs_images) $(DESTDIR)$(emacslispdir)
+
+CLEAN := $(CLEAN) $(emacs_bytecode)
