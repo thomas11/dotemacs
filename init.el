@@ -1,15 +1,24 @@
 (setq inhibit-startup-message t)
 
+;; 2010-04-21, for emacsclient
+(server-start)
 
 (setq user-mail-address "tkappler@gmail.com")
+(setq message-send-mail-function 'smtpmail-send-it
+      smtpmail-starttls-credentials '(("smtp.gmail.com" 587 nil nil))
+      smtpmail-auth-credentials '(("smtp.gmail.com" 587 "tkappler@gmail.com" nil))
+      smtpmail-default-smtp-server "smtp.gmail.com"
+      smtpmail-smtp-server "smtp.gmail.com"
+      smtpmail-smtp-service 587
+      smtpmail-local-domain "thomas.foo")
 
 
 ;; Set load-path, including subdirectories.
 ;; 2009-04-18 from http://www.emacswiki.org/emacs/LoadPath
 (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
     (let* ((my-lisp-dir "~/.emacs.d/elisp/")
-	   (default-directory my-lisp-dir))
-      (setq load-path (cons my-lisp-dir load-path))
+	   (my-init-dir "~/.emacs.d/init/"))
+      (setq load-path (cons my-lisp-dir (cons my-init-dir load-path)))
       (normal-top-level-add-subdirs-to-load-path)))
 
 
@@ -50,8 +59,24 @@
     (progn
       (setq browse-url-browser-function 'browse-url-generic
             browse-url-generic-program "chromium")
-      (custom-set-faces '(default ((t (:height 77 :family "Inconsolata")))))))
+      (custom-set-faces '(default ((t (:height 101 :family "Inconsolata")))))))
 
+
+(defun my-big-screen ()
+  (interactive)
+  (my-initialize-frame 3))
+
+(defun my-small-screen ()
+  (interactive)
+  (my-initialize-frame 2))
+
+(defun my-initialize-frame (columns)
+  (set-frame-parameter nil :fullscreen t)
+  (delete-other-windows)
+  (dotimes (not-used (1- columns)) 
+    (split-window-horizontally))
+  (balance-windows))
+  
 
 ;; Save backups in one place instead of clobbering the disk.
 ;; 2009-04-20 from http://www.emacswiki.org/emacs/BackupDirectory
@@ -75,6 +100,7 @@
 (setq woman-use-own-frame nil)
 (setq-default indent-tabs-mode nil) ; no tabs
 (ffap-bindings) ; find-file-at-point
+(blink-cursor-mode nil)
 
 ;; 2009-11-14 md-readme. List emacs projects on github so they are set
 ;; up for auto-generating their README.md.
@@ -82,9 +108,10 @@
 (dir-locals-set-class-variables
  'generate-README-with-md-readme
  '((emacs-lisp-mode . ((mdr-generate-readme . t)))))
-(dolist (dir '("~/Projects/wpmail/"
-               "~/Projects/md-readme/"
-               "~/Projects/simple-journal/"))
+(dolist (dir '("~/Dropbox/delim-kill/"
+               "~/Dropbox/wpmail/"
+               "~/Dropbox/md-readme/"
+               "~/Dropbox/simple-journal/"))
   (dir-locals-set-directory-class
    dir 'generate-README-with-md-readme))
 (add-hook 'after-save-hook 
@@ -126,28 +153,18 @@
 	(indent-region (region-beginning) (region-end) nil))))
 
 
-;; Move between windows using shift-arrow
+;; ;; Move between windows using shift-arrow
 (when (fboundp 'windmove-default-keybindings)
   (windmove-default-keybindings))
 
 
-;; 2009-07-20 from http://www.adamspiers.org/elisp/smooth-scrolling.el
+;; ;; 2009-07-20 from http://www.adamspiers.org/elisp/smooth-scrolling.el
 (require 'smooth-scrolling)
 
 
-;; 2009-07-25
+;; ;; 2009-07-25
 (require 'uniquify)
 (setq uniquify-buffer-name-style 'post-forward)
-
-
-(setq message-send-mail-function 'smtpmail-send-it
-      smtpmail-starttls-credentials '(("smtp.gmail.com" 587 nil nil))
-      smtpmail-auth-credentials '(("smtp.gmail.com" 587 "tkappler@gmail.com" nil))
-      smtpmail-default-smtp-server "smtp.gmail.com"
-      smtpmail-smtp-server "smtp.gmail.com"
-      smtpmail-smtp-service 587
-      smtpmail-local-domain "thomas.foo")
-
 
 
 ;; HELPER FUNCTIONS
@@ -195,6 +212,9 @@ line."
 
 ;; MODES
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; 2010-05-02 <http://notmuchmail.org/>
+(require 'notmuch)
 
 ;; 2009-11-07 <>
 (require 'now-focus)
@@ -327,15 +347,19 @@ line."
   (setq cperl-indent-level 4))
 (add-hook 'cperl-mode-hook 'thomas11-perl-indent-setup)
 
+;; Devel::PerlySense, 2010-07-23
+(require 'flymake)
+(load "perlysense.el")
+
 ;; Easy access to PerlTidy, from
 ;; http://www.emacswiki.org/emacs/CPerlMode (comments).
-(defun perltidy-region ()
-  "Run perltidy on the current region."
-  (interactive)
-  (save-excursion
-    (shell-command-on-region (point) (mark) "perltidy -q" nil t)))
-(defun perltidy-defun ()
-  "Run perltidy on the current defun."
-  (interactive)
-  (save-excursion (mark-defun)
-		  (perltidy-region)))
+;; (defun perltidy-region ()
+;;   "Run perltidy on the current region."
+;;   (interactive)
+;;   (save-excursion
+;;     (shell-command-on-region (point) (mark) "perltidy -q" nil t)))
+;; (defun perltidy-defun ()
+;;   "Run perltidy on the current defun."
+;;   (interactive)
+;;   (save-excursion (mark-defun)
+;; 		  (perltidy-region)))
