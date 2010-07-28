@@ -17,13 +17,13 @@
 ;; 2009-04-18 from http://www.emacswiki.org/emacs/LoadPath
 (if (fboundp 'normal-top-level-add-subdirs-to-load-path)
     (let* ((my-lisp-dir "~/.emacs.d/elisp/")
-	   (my-init-dir "~/.emacs.d/init/"))
+           (my-init-dir "~/.emacs.d/init/"))
       (setq load-path (cons my-lisp-dir (cons my-init-dir load-path)))
       (normal-top-level-add-subdirs-to-load-path)))
 
 
 (setq Info-additional-directory-list '("~/.emacs.d/usr/share/info"
-				       "~/software/usr/share/info"))
+                                       "~/software/usr/share/info"))
 
 
 ;; 2009-08-02: If we're on Mac OS, set the path, as Mac OS doesn't
@@ -33,9 +33,9 @@
 (if (string-match "darwin" system-configuration)
     (progn
       (setenv "PATH"
-	      (concat (getenv "PATH")	":/usr/local/bin"))
+              (concat (getenv "PATH")   ":/usr/local/bin"))
       (setq exec-path 
-	    (append exec-path '("/usr/local/bin")))
+            (append exec-path '("/usr/local/bin")))
       (add-to-list Info-additional-directory-list '("/sw/share/info"))
 
       ;; 2009-07-20 iTunes control from http://www.emacswiki.org/emacs/itunes.el
@@ -115,14 +115,14 @@
   (dir-locals-set-directory-class
    dir 'generate-README-with-md-readme))
 (add-hook 'after-save-hook 
-	  '(lambda () (when (boundp 'mdr-generate-readme) (mdr-generate))))
+          '(lambda () (when (boundp 'mdr-generate-readme) (mdr-generate))))
 
 ;; Emacs Lisp mode hooks
 (add-hook 'emacs-lisp-mode-hook
           '(lambda ()
              ;; Make el-expectations available for unit tests, from
              ;; <http://www.emacswiki.org/emacs/EmacsLispExpectations>.
-	     (require 'el-expectations)
+             (require 'el-expectations)
              ;; 2009-11-16 Require the ELisp maintainer helpers when
              ;; editing Emacs Lisp, they can be used to check the
              ;; headers. Thanks Jonas Bernoulli.
@@ -141,16 +141,16 @@
 ;; http://www.emacswiki.org/emacs/AutoIndentation.
 (defadvice yank (after indent-region activate)
   (if (member major-mode '(cperl-mode perl-mode emacs-lisp-mode scheme-mode lisp-mode
-				      c-mode c++-mode objc-mode
-				      latex-mode plain-tex-mode))
+                                      c-mode c++-mode objc-mode
+                                      latex-mode plain-tex-mode))
       (let ((mark-even-if-inactive t))
-	(indent-region (region-beginning) (region-end) nil))))
+        (indent-region (region-beginning) (region-end) nil))))
 (defadvice yank-pop (after indent-region activate)
   (if (member major-mode '(cperl-mode perl-mode emacs-lisp-mode scheme-mode lisp-mode
-				      c-mode c++-mode objc-mode
-				      latex-mode plain-tex-mode))
+                                      c-mode c++-mode objc-mode
+                                      latex-mode plain-tex-mode))
       (let ((mark-even-if-inactive t))
-	(indent-region (region-beginning) (region-end) nil))))
+        (indent-region (region-beginning) (region-end) nil))))
 
 
 ;; ;; Move between windows using shift-arrow
@@ -234,20 +234,20 @@ line."
 (progn
   (require 'slime-autoloads)
   (setq swank-clojure-jar-path
-  	(list
-  	 "~/software/clojure/clojure_1.0.0/clojure-1.0.0.jar"
-  	 "~/software/clojure/clojure-contrib/clojure-contrib.jar"
-  	 "~/software/clojure/jline.jar"))
+        (list
+         "~/software/clojure/clojure_1.0.0/clojure-1.0.0.jar"
+         "~/software/clojure/clojure-contrib/clojure-contrib.jar"
+         "~/software/clojure/jline.jar"))
   ;; (setq swank-clojure-jar-path
   ;;       "~/software/clojure/clojure_1.0.0/clojure-1.0.0.jar")
   (require 'swank-clojure-autoload)
   (eval-after-load 'slime
     '(progn (require 'swank-clojure)
-	    (setq slime-lisp-implementations
-		  (cons `(clojure ,(swank-clojure-cmd) :init
-				  swank-clojure-init)
-			(remove-if #'(lambda (x) (eq (car x) 'clojure))
-				   slime-lisp-implementations))))))
+            (setq slime-lisp-implementations
+                  (cons `(clojure ,(swank-clojure-cmd) :init
+                                  swank-clojure-init)
+                        (remove-if #'(lambda (x) (eq (car x) 'clojure))
+                                   slime-lisp-implementations))))))
 
 
 ;; My own stuff
@@ -266,22 +266,22 @@ line."
 (require 'js-comint)
 (setq inferior-js-program-command "js")
 (add-hook 'js2-mode-hook '(lambda ()
-			    (local-set-key "\C-x\C-e" 'js-send-last-sexp)
-			    (local-set-key "\C-\M-x" 'js-send-last-sexp-and-go)
-			    (local-set-key "\C-cb" 'js-send-buffer)
-			    (local-set-key "\C-c\C-b" 'js-send-buffer-and-go)
-			    (local-set-key "\C-cl" 'js-load-file-and-go)))
+                            (local-set-key "\C-x\C-e" 'js-send-last-sexp)
+                            (local-set-key "\C-\M-x"  'js-send-last-sexp-and-go)
+                            (local-set-key "\C-cb"    'js-send-buffer)
+                            (local-set-key "\C-c\C-b" 'js-send-buffer-and-go)
+                            (local-set-key "\C-cl"    'js-load-file-and-go)))
 
 ;; 2009-11-15 from <http://www.corybennett.org/projects/>: make M-x
 ;; compile run jslint and step through the problems.
 (add-hook 'js2-mode-hook
-	  (lambda ()
+          (lambda ()
             ; make emacs recognize the error format produced by jslint
-	    (set (make-local-variable 'compilation-error-regexp-alist)
-		 '(("^\\([a-zA-Z.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)" 1 2 3)))
-	    (set (make-local-variable 'compile-command)
-		 (let ((file (file-name-nondirectory buffer-file-name)))
-		   (concat "jslint " file)))))
+            (set (make-local-variable 'compilation-error-regexp-alist)
+                 '(("^\\([a-zA-Z.0-9_/-]+\\):\\([0-9]+\\):\\([0-9]+\\)" 1 2 3)))
+            (set (make-local-variable 'compile-command)
+                 (let ((file (file-name-nondirectory buffer-file-name)))
+                   (concat "jslint " file)))))
 
 ;;; END JAVASCRIPT ;;
 
@@ -362,4 +362,4 @@ line."
 ;;   "Run perltidy on the current defun."
 ;;   (interactive)
 ;;   (save-excursion (mark-defun)
-;; 		  (perltidy-region)))
+;;                (perltidy-region)))
