@@ -259,11 +259,13 @@ line."
 
 (setq load-path (cons "/usr/lib/erlang/lib/tools-2.6.5.1/emacs" load-path))
 (add-to-list 'load-path "/usr/share/emacs/site-lisp/ess")
-;(load-library "erlang-start")
 
 (require 'erlang-start)
 (add-to-list 'auto-mode-alist '("\\.erl?$" . erlang-mode))
 (add-to-list 'auto-mode-alist '("\\.hrl?$" . erlang-mode))
+
+(require 'distel)
+(distel-setup)
 
 
 ;;; JAVASCRIPT ;;;
