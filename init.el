@@ -15,12 +15,11 @@
 
 ;; Set load-path, including subdirectories.
 ;; 2009-04-18 from http://www.emacswiki.org/emacs/LoadPath
-(if (fboundp 'normal-top-level-add-subdirs-to-load-path)
-    (let* ((my-lisp-dir "~/.emacs.d/elisp/")
-           (my-init-dir "~/.emacs.d/init/"))
-      (setq load-path (cons my-lisp-dir (cons my-init-dir load-path)))
-      (normal-top-level-add-subdirs-to-load-path)))
-
+(when (fboundp 'normal-top-level-add-subdirs-to-load-path)
+    (setq load-path (cons "~/.emacs.d/" load-path))
+    (progn (cd "~/.emacs.d/")
+           (normal-top-level-add-subdirs-to-load-path)
+           (cd "~/Dropbox")))
 
 (setq Info-additional-directory-list '("~/.emacs.d/usr/share/info"
                                        "~/software/usr/share/info"))
@@ -153,16 +152,16 @@
         (indent-region (region-beginning) (region-end) nil))))
 
 
-;; ;; Move between windows using shift-arrow
+;; Move between windows using shift-arrow
 (when (fboundp 'windmove-default-keybindings)
   (windmove-default-keybindings))
 
 
-;; ;; 2009-07-20 from http://www.adamspiers.org/elisp/smooth-scrolling.el
+;; 2009-07-20 from http://www.adamspiers.org/elisp/smooth-scrolling.el
 (require 'smooth-scrolling)
 
 
-;; ;; 2009-07-25
+;; 2009-07-25
 (require 'uniquify)
 (setq uniquify-buffer-name-style 'post-forward)
 
@@ -337,6 +336,10 @@ line."
 (require 'muse-publish)
 
 
+;; 2010-09-10 writegood-mode <http://github.com/bnbeckwith/writegood-mode>
+(require 'writegood-mode)
+
+
 ;; Markdown mode from http://jblevins.org/projects/markdown-mode/ for 
 ;; http://daringfireball.net/projects/markdown/, 2009-06-20
 (autoload 'markdown-mode "markdown-mode.el"
@@ -346,7 +349,8 @@ line."
 (defun markdown-custom ()
   "markdown-mode-hook"
   (setq markdown-command "Markdown.pl | SmartyPants.pl -2")
-  (auto-fill-mode))
+  (auto-fill-mode)
+  (writegood-mode))
 (add-hook 'markdown-mode-hook '(lambda() (markdown-custom)))
 
 
@@ -376,3 +380,24 @@ line."
 ;;   (interactive)
 ;;   (save-excursion (mark-defun)
 ;;                (perltidy-region)))
+
+
+(custom-set-variables
+  ;; custom-set-variables was added by Custom.
+  ;; If you edit it by hand, you could mess it up, so be careful.
+  ;; Your init file should contain only one such instance.
+  ;; If there is more than one, they won't work right.
+ '(LaTeX-command "pdflatex")
+ '(TeX-PDF-mode t)
+ '(delete-selection-mode nil)
+ '(mark-even-if-inactive t)
+ '(scroll-bar-mode (quote right))
+ '(transient-mark-mode 1))
+(custom-set-faces
+  ;; custom-set-faces was added by Custom.
+  ;; If you edit it by hand, you could mess it up, so be careful.
+  ;; Your init file should contain only one such instance.
+  ;; If there is more than one, they won't work right.
+ '(default ((t (:height 101 :family "Inconsolata"))))
+ '(writegood-passive-voice-face ((((class color)) (:background "moccasin"))))
+ '(writegood-weasels-face ((((class color) (background light)) (:background "moccasin")))))

@@ -22,6 +22,7 @@ Archiving
 * Tar: (tar).				Making tape (or disk) archives.
 
 Emacs
+* Distel: (distel).             Erlang development environment.
 * VM: (vm).                     A mail reader.
 * VM-pcrisis: (vm-pcrisis).     A personality crisis solver for VM
 
