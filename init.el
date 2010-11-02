@@ -62,20 +62,29 @@
 
 
 (defun my-big-screen ()
+  "Set up frame for external screen, with three windows."
   (interactive)
   (my-initialize-frame 3))
 
 (defun my-small-screen ()
+  "Set up frame for laptop screen, with two windows."
   (interactive)
   (my-initialize-frame 2))
 
 (defun my-initialize-frame (columns)
+  "Set current frame to fullscreen and split it into COLUMNS
+vertical windows."
   (set-frame-parameter nil :fullscreen t)
   (delete-other-windows)
   (dotimes (not-used (1- columns)) 
     (split-window-horizontally))
   (balance-windows))
   
+
+(setq frame-title-format
+      (list (format "Emacs: %%j")
+            '(buffer-file-name "%f" (dired-directory dired-directory "%b"))))
+
 
 ;; Save backups in one place instead of clobbering the disk.
 ;; 2009-04-20 from http://www.emacswiki.org/emacs/BackupDirectory
@@ -178,9 +187,17 @@
     (fill-paragraph nil)))
 
 
+;; 2010-09-10
+;; http://stackoverflow.com/questions/3669511/the-function-to-show-current-files-full-path-in-mini-buffer
+(defun my-show-buffer-file-name ()
+  "Show the full path file name in the minibuffer."
+  (interactive)
+  (message (buffer-file-name) ))
+
+
 ;; 2010-03-11
 ;; http://stackoverflow.com/questions/2416655/file-path-to-clipboard-in-emacs
-(defun my-put-file-name-on-clipboard ()
+(defun my-buffer-file-name-on-clipboard ()
   "Put the current file name on the clipboard"
   (interactive)
   (let ((filename (if (equal major-mode 'dired-mode)
