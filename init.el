@@ -134,14 +134,14 @@ vertical windows."
 (show-paren-mode t)
 (column-number-mode t)
 (setq visible-bell t)
-(scroll-bar-mode nil)
-(tool-bar-mode nil)
-(menu-bar-mode nil)
+(scroll-bar-mode 0)
+(tool-bar-mode 0)
+(menu-bar-mode 0)
 (setq kill-whole-line t) ; C-k deletes the end of line
 (setq woman-use-own-frame nil)
 (setq-default indent-tabs-mode nil) ; no tabs
 (ffap-bindings) ; find-file-at-point
-(blink-cursor-mode nil)
+(blink-cursor-mode 0)
 
 ;; 2009-11-14 md-readme. List emacs projects on github so they are set
 ;; up for auto-generating their README.md.
