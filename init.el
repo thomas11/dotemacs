@@ -20,6 +20,7 @@
     (progn (cd "~/.emacs.d/")
            (normal-top-level-add-subdirs-to-load-path)
            (cd "~/Dropbox")))
+(add-to-list 'load-path "/usr/share/emacs/site-lisp")
 
 (setq Info-additional-directory-list '("~/.emacs.d/usr/share/info"
                                        "~/software/usr/share/info"))
@@ -273,9 +274,7 @@ line."
 
 ;;; ERLANG ;;;
 
-(setq load-path (cons "/usr/lib/erlang/lib/tools-2.6.5.1/emacs" load-path))
-(add-to-list 'load-path "/usr/share/emacs/site-lisp/ess")
-
+(load-file "/usr/share/emacs/site-lisp/erlang.el")
 (require 'erlang-start)
 (add-to-list 'auto-mode-alist '("\\.erl?$" . erlang-mode))
 (add-to-list 'auto-mode-alist '("\\.hrl?$" . erlang-mode))
