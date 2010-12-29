@@ -62,6 +62,38 @@
       (custom-set-faces '(default ((t (:height 101 :family "Inconsolata")))))))
 
 
+(defun s5-build-slides ()
+  "Build slides from a Markdown document using my Perl script."
+  (interactive)
+
+  (defun insert-timestamp (buffer)
+    "Insert 'current-time-string' at the end of BUFFER."
+    (save-excursion (set-buffer buffer)
+                    (goto-char (point-max))
+                    (insert "\n" (current-time-string) "\n")))
+
+  (defun build-slides-from-buffer (output-buffer)
+    "Build S5 slides depending on the file-local S5 style.
+If there is a file-local style, the build script needs it as an
+argument, but if there's none, we must omit it. A nil argument
+won't do, as call-process chokes on it.
+Return the exit code of the external build script."
+    (let* ((script "~/Dropbox/perl/Thomas/S5/Builder.pm")
+           (build-function
+            (apply-partially 'call-process script nil output-buffer nil
+                             (buffer-file-name))))
+      (if (boundp 's5-style)
+          (funcall build-function s5-style)
+        (funcall build-function))))
+
+  (let* ((output-buffer-name "*s5*")
+         (output-buffer (get-buffer-create output-buffer-name)))
+    (insert-timestamp output-buffer)
+    (if (> (build-slides-from-buffer output-buffer) 0)
+        (display-buffer output-buffer)
+      (message "Slides built, more info in %s." output-buffer-name))))
+
+
 (defun my-big-screen ()
   "Set up frame for external screen, with three windows."
   (interactive)
