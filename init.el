@@ -207,6 +207,11 @@ vertical windows."
 ;; HELPER FUNCTIONS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun my-perltidy-buffer ()
+  (interactive)
+  (shell-command-on-region (point-min) (point-max) "perltidy" nil t))
+
+
 ;;; Stefan Monnier <foo at acm.org>. It is the opposite of
 ;;; fill-paragraph.
 (defun unfill-paragraph ()
