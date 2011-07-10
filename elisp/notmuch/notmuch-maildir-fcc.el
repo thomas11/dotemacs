@@ -16,73 +16,119 @@
 ;; To use this as the fcc handler for message-mode,
 ;; customize the notmuch-fcc-dirs variable
 
+(eval-when-compile (require 'cl))
 (require 'message)
+
+(require 'notmuch-lib)
 
 (defvar notmuch-maildir-fcc-count 0)
 
-(defcustom notmuch-fcc-dirs nil
- "If set to non-nil, this will cause message mode to file (fcc) your mail in the specified directory, depending on your From address.
+(defcustom notmuch-fcc-dirs "sent"
+ "Determines the maildir directory in which to save outgoing mail.
 
- The first entry (a list) is used as a default fallback
- when nothing matches. So in the easiest case notmuch-fcc-dirs is
- just something like ((\"INBOX.Sent\"))
+Three types of values are permitted:
 
- If you need a more fancy setup, where you want different Outboxes depending
- on your From address, you use something like this:
+- nil: no Fcc header is added,
 
-     (   (\"defaultinbox\")
-         (\"Sebastian Spaeth <Sebastian@SSpaeth.de>\" . \"privat\")
-         (\"Sebastian Spaeth <SSpaeth@ethz.ch>\" . \"uni\")
-     )
+- a string: the value of `notmuch-fcc-dirs' is the name of the
+  folder to use,
 
- This will constructs a path, concatenating the content of the
- variable 'message-directory' (a message mode variable
- customizable via m-x
- customize-variable<RET>message-directory<RET>) and the second
- part in the alist."
+- a list: the folder is chosen based on the From address of the
+  current message using a list of regular expressions and
+  corresponding folders:
+
+     ((\"Sebastian@SSpaeth.de\" . \"privat\")
+      (\"spaetz@sspaeth.de\" . \"OUTBOX.OSS\")
+      (\".*\" . \"defaultinbox\"))
+
+  If none of the regular expressions match the From address, no
+  Fcc header will be added.
+
+In all cases, a relative FCC directory will be understood to
+specify a directory within the notmuch mail store, (as set by
+the database.path option in the notmuch configuration file).
+
+You will be prompted to create the directory if it does not exist
+yet when sending a mail."
+
  :require 'notmuch-fcc-initialization
  :group 'notmuch
-)
+ :type '(choice
+	 (const :tag "No FCC header" nil)
+	 (string :tag "A single folder")
+	 (repeat :tag "A folder based on the From header"
+		 (cons regexp (string :tag "Folder")))))
 
 (defun notmuch-fcc-initialization ()
   "If notmuch-fcc-directories is set,
    hook them into the message-fcc-handler-function"
-    ;Set up the message-fcc-handler to move mails to the maildir in Fcc
-    ;The parameter is hardcoded to mark messages as "seen"
+    ;; Set up the message-fcc-handler to move mails to the maildir in Fcc
+    ;; The parameter is set to mark messages as "seen"
     (setq message-fcc-handler-function
           '(lambda (destdir)
              (notmuch-maildir-fcc-write-buffer-to-maildir destdir t)))
-    ;add a hook to actually insert the Fcc header when sending
-    ;(preferrably we would use message-header-setup-up, but notmuch-reply
-    ; munges headers after that is run, so it won't work for replies within
-    ; notmuch)
-    (add-hook 'message-send-hook 'notmuch-fcc-header-setup))
+    ;; add a hook to actually insert the Fcc header when sending
+    (add-hook 'message-header-setup-hook 'notmuch-fcc-header-setup))
 
 (defun notmuch-fcc-header-setup ()
-  "Can be added to message-send-hook and will set the FCC header
-      based on the values of notmuch-fcc-directories (see the
-      variable customization there for examples). It uses the
-      first entry as default fallback if no From address
-      matches."
-  ; only do something if notmuch-fcc-dirs is set
-  (if notmuch-fcc-dirs
-   (let ((subdir
-          (cdr (assoc-string (message-fetch-field "from") notmuch-fcc-dirs t))))
-     (if (eq subdir nil) (setq subdir (car (car notmuch-fcc-dirs))))
-     (unless (message-fetch-field "fcc")
-       (message-add-header (concat "Fcc: "
-				   (file-name-as-directory message-directory)
-				   subdir)))
-     (let ((fcc-header (message-fetch-field "fcc")))
-     (unless (notmuch-maildir-fcc-dir-is-maildir-p fcc-header)
-       (cond ((not (file-writable-p fcc-header))
-	      (error (format "%s is not a maildir, but you don't have permission to create one." fcc-header)))
-	     ((y-or-n-p (format "%s is not a maildir. Create it? "
-				 fcc-header))
-	      (notmuch-maildir-fcc-create-maildir fcc-header))
-	     (t
-	      (error "Not sending message."))))))))
+  "Add an Fcc header to the current message buffer.
 
+Can be added to `message-send-hook' and will set the Fcc header
+based on the values of `notmuch-fcc-dirs'. An existing Fcc header
+will NOT be removed or replaced."
+
+  (let ((subdir
+	 (cond
+	  ((or (not notmuch-fcc-dirs)
+	       (message-fetch-field "Fcc"))
+	   ;; Nothing set or an existing header.
+	   nil)
+
+	  ((stringp notmuch-fcc-dirs)
+	   notmuch-fcc-dirs)
+
+	  ((and (listp notmuch-fcc-dirs)
+		(= 1 (length (car notmuch-fcc-dirs))))
+	   ;; Old style - no longer works.
+	   (error "Invalid `notmuch-fcc-dirs' setting (old style)"))
+
+	  ((listp notmuch-fcc-dirs)
+	   (let* ((from (message-fetch-field "From"))
+		  (match
+		   (catch 'first-match
+		     (dolist (re-folder notmuch-fcc-dirs)
+		       (when (string-match-p (car re-folder) from)
+			 (throw 'first-match re-folder))))))
+	     (if match
+		 (cdr match)
+	       (message "No Fcc header added.")
+	       nil)))
+
+	  (t
+	   (error "Invalid `notmuch-fcc-dirs' setting (neither string nor list)")))))
+
+    (when subdir
+      (message-add-header
+       (concat "Fcc: "
+	       (file-truename
+		;; If the resulting directory is not an absolute path,
+		;; prepend the standard notmuch database path.
+		(if (= (elt subdir 0) ?/)
+		    subdir
+		  (concat (notmuch-database-path) "/" subdir)))))
+      
+      ;; finally test if fcc points to a valid maildir
+      (let ((fcc-header (message-fetch-field "Fcc")))
+	(unless (notmuch-maildir-fcc-dir-is-maildir-p fcc-header)
+	  (cond ((not (file-writable-p fcc-header))
+		 (error (format "No permission to create %s, which does not exist"
+				fcc-header)))
+		((y-or-n-p (format "%s is not a maildir. Create it? "
+				   fcc-header))
+		 (notmuch-maildir-fcc-create-maildir fcc-header))
+		(t
+		 (error "Message not sent"))))))))
+ 
 (defun notmuch-maildir-fcc-host-fixer (hostname)
   (replace-regexp-in-string "/\\|:"
 			    '(lambda (s)
@@ -170,3 +216,4 @@ return t if successful, and nil otherwise."
 
 (notmuch-fcc-initialization)
 (provide 'notmuch-maildir-fcc)
+

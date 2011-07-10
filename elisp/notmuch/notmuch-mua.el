@@ -19,7 +19,6 @@
 ;;
 ;; Authors: David Edmondson <dme@dme.org>
 
-(require 'cl)
 (require 'message)
 
 (require 'notmuch-lib)
@@ -92,12 +91,7 @@ list."
 	((same-window-regexps '("\\*mail .*")))
       (notmuch-mua-mail (mail-header 'to headers)
 			(mail-header 'subject headers)
-			(loop for header in headers
-			      if (not (or (eq 'to (car header))
-					  (eq 'subject (car header))))
-			      collect header)))
-    (message-sort-headers)
-    (message-hide-headers)
+			(message-headers-to-generate headers t '(to subject))))
     ;; insert the message body - but put it in front of the signature
     ;; if one is present
     (goto-char (point-max))
@@ -124,12 +118,17 @@ list."
 
 (defun notmuch-mua-mail (&optional to subject other-headers continue
 				   switch-function yank-action send-actions)
+  "Invoke the notmuch mail composition window."
   (interactive)
 
   (when notmuch-mua-user-agent-function
     (let ((user-agent (funcall notmuch-mua-user-agent-function)))
       (when (not (string= "" user-agent))
 	(push (cons "User-Agent" user-agent) other-headers))))
+
+  (unless (mail-header 'from other-headers)
+    (push (cons "From" (concat
+			(notmuch-user-name) " <" (notmuch-user-primary-email) ">")) other-headers))
 
   (message-mail to subject other-headers continue
 		switch-function yank-action send-actions)

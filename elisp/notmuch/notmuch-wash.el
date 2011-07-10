@@ -145,7 +145,7 @@ is what to put on the button."
 	   (re-search-forward notmuch-wash-signature-regexp nil t))
       (let* ((sig-start (match-beginning 0))
 	     (sig-end (match-end 0))
-	     (sig-lines (1- (count-lines sig-start (point-max)))))
+	     (sig-lines (count-lines sig-start (point-max))))
 	(if (<= sig-lines notmuch-wash-signature-lines-max)
 	    (let ((sig-start-marker (make-marker))
 		  (sig-end-marker (make-marker)))
@@ -190,7 +190,7 @@ is what to put on the button."
 (defun notmuch-wash-tidy-citations (depth)
   "Improve the display of cited regions of a message.
 
-Perform four transformations on the message body:
+Perform several transformations on the message body:
 
 - Remove lines of repeated citation leaders with no other
   content,

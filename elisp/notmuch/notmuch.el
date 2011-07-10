@@ -47,7 +47,7 @@
 ; kudos: Notmuch list <notmuch@notmuchmail.org> (subscription is not
 ; required, but is available from http://notmuchmail.org).
 
-(require 'cl)
+(eval-when-compile (require 'cl))
 (require 'mm-view)
 (require 'message)
 
@@ -207,6 +207,7 @@ For a mouse binding, return nil."
     (define-key map "m" 'notmuch-mua-mail)
     (define-key map "s" 'notmuch-search)
     (define-key map "o" 'notmuch-search-toggle-order)
+    (define-key map "c" 'notmuch-search-stash-map)
     (define-key map "=" 'notmuch-search-refresh-view)
     (define-key map "G" 'notmuch-search-poll-and-refresh-view)
     (define-key map "t" 'notmuch-search-filter-by-tag)
@@ -221,6 +222,18 @@ For a mouse binding, return nil."
   "Keymap for \"notmuch search\" buffers.")
 (fset 'notmuch-search-mode-map notmuch-search-mode-map)
 
+(defvar notmuch-search-stash-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "i" 'notmuch-search-stash-thread-id)
+    map)
+  "Submap for stash commands")
+(fset 'notmuch-search-stash-map notmuch-search-stash-map)
+
+(defun notmuch-search-stash-thread-id ()
+  "Copy thread ID of current thread to kill-ring."
+  (interactive)
+  (notmuch-common-do-stash (notmuch-search-find-thread-id)))
+
 (defvar notmuch-search-query-string)
 (defvar notmuch-search-target-thread)
 (defvar notmuch-search-target-line)
@@ -232,7 +245,7 @@ For a mouse binding, return nil."
   "Exit the search buffer, calling any defined continuation function."
   (interactive)
   (let ((continuation notmuch-search-continuation))
-    (kill-this-buffer)
+    (notmuch-kill-this-buffer)
     (when continuation
       (funcall continuation))))
 
@@ -285,6 +298,38 @@ For a mouse binding, return nil."
  "Face for the single-line message summary in notmuch-show-mode."
  :group 'notmuch)
 
+(defface notmuch-search-date
+  '((t :inherit default))
+  "Face used in search mode for dates."
+  :group 'notmuch)
+
+(defface notmuch-search-count
+  '((t :inherit default))
+  "Face used in search mode for the count matching the query."
+  :group 'notmuch)
+
+(defface notmuch-search-subject
+  '((t :inherit default))
+  "Face used in search mode for subjects."
+  :group 'notmuch)
+
+(defface notmuch-search-matching-authors
+  '((t :inherit default))
+  "Face used in search mode for authors matching the query."
+  :group 'notmuch)
+
+(defface notmuch-search-non-matching-authors
+  '((((class color)
+      (background dark))
+     (:foreground "grey30"))
+    (((class color)
+      (background light))
+     (:foreground "grey60"))
+    (t
+     (:italic t)))
+  "Face used in search mode for authors not matching the query."
+  :group 'notmuch)
+
 (defface notmuch-tag-face
   '((((class color)
       (background dark))
@@ -294,10 +339,9 @@ For a mouse binding, return nil."
      (:foreground "navy blue" :bold t))
     (t
      (:bold t)))
-  "Notmuch search mode face used to highligh tags."
+  "Face used in search mode face for tags."
   :group 'notmuch)
 
-;;;###autoload
 (defun notmuch-search-mode ()
   "Major mode displaying results of a notmuch search.
 
@@ -427,7 +471,7 @@ and will also appear in a buffer named \"*Notmuch errors*\"."
       (let ((end (point)))
 	(delete-region beg end)
 	(insert (propertize (mapconcat  'identity tags " ")
-			    'font-lock-face 'notmuch-tag-face))))))
+			    'face 'notmuch-tag-face))))))
 
 (defun notmuch-search-get-tags ()
   (save-excursion
@@ -519,6 +563,10 @@ This function advances the next thread when finished."
   (notmuch-search-remove-tag-thread "inbox")
   (forward-line))
 
+(defvar notmuch-search-process-filter-data nil
+  "Data that has not yet been processed.")
+(make-variable-buffer-local 'notmuch-search-process-filter-data)
+
 (defun notmuch-search-process-sentinel (proc msg)
   "Add a message to let user know when \"notmuch search\" exits"
   (let ((buffer (process-buffer proc))
@@ -536,6 +584,8 @@ This function advances the next thread when finished."
 		      (insert "Incomplete search results (search process was killed).\n"))
 		  (if (eq status 'exit)
 		      (progn
+			(if notmuch-search-process-filter-data
+			    (insert (concat "Error: Unexpected output from notmuch search:\n" notmuch-search-process-filter-data)))
 			(insert "End of search results.")
 			(if (not (= exit-status 0))
 			    (insert (format " (process returned %d)" exit-status)))
@@ -543,55 +593,145 @@ This function advances the next thread when finished."
 			(if (and atbob
 				 (not (string= notmuch-search-target-thread "found")))
 			    (set 'never-found-target-thread t))))))
-	      (if (and never-found-target-thread
+	      (when (and never-found-target-thread
 		       notmuch-search-target-line)
-		  (goto-line notmuch-search-target-line)))))))
+		  (goto-char (point-min))
+		  (forward-line (1- notmuch-search-target-line))))))))
 
 (defcustom notmuch-search-line-faces nil
   "Tag/face mapping for line highlighting in notmuch-search.
 
 Here is an example of how to color search results based on tags.
-(the following text would be placed in your ~/.emacs file):
+ (the following text would be placed in your ~/.emacs file):
 
-(setq notmuch-search-line-faces '((\"delete\" . '(:foreground \"red\"))
-                                 (\"unread\" . '(:foreground \"green\"))))
+ (setq notmuch-search-line-faces '((\"delete\" . '(:foreground \"red\"
+						   :background \"blue\"))
+                                   (\"unread\" . '(:foreground \"green\"))))
 
-Order matters: for lines with multiple tags, the the first
-matching will be applied."
+The attributes defined for matching tags are merged, with later
+attributes overriding earlier. A message having both \"delete\"
+and \"unread\" tags with the above settings would have a green
+foreground and blue background."
   :type '(alist :key-type (string) :value-type (list))
   :group 'notmuch)
 
 (defun notmuch-search-color-line (start end line-tag-list)
-  "Colorize lines in notmuch-show based on tags"
-  (if notmuch-search-line-faces
-      (let ((overlay (make-overlay start end))
-	    (tags-faces (copy-alist notmuch-search-line-faces)))
-	(while tags-faces
-	  (let* ((tag-face (car tags-faces))
-		 (tag (car tag-face))
-		 (face (cdr tag-face)))
-	    (cond ((member tag line-tag-list)
-		   (overlay-put overlay 'face face)
-		   (setq tags-faces nil))
-		  (t
-		   (setq tags-faces (cdr tags-faces)))))))))
+  "Colorize lines in `notmuch-show' based on tags."
+  ;; Create the overlay only if the message has tags which match one
+  ;; of those specified in `notmuch-search-line-faces'.
+  (let (overlay)
+    (mapc '(lambda (elem)
+	     (let ((tag (car elem))
+		   (attributes (cdr elem)))
+	       (when (member tag line-tag-list)
+		 (when (not overlay)
+		   (setq overlay (make-overlay start end)))
+		 ;; Merge the specified properties with any already
+		 ;; applied from an earlier match.
+		 (overlay-put overlay 'face
+			      (append (overlay-get overlay 'face) attributes)))))
+	  notmuch-search-line-faces)))
+
+(defun notmuch-search-isearch-authors-show (overlay)
+  (remove-from-invisibility-spec (cons (overlay-get overlay 'invisible) t)))
+
+(defun notmuch-search-author-propertize (authors)
+  "Split `authors' into matching and non-matching authors and
+propertize appropriately. If no boundary between authors and
+non-authors is found, assume that all of the authors match."
+  (if (string-match "\\(.*\\)|\\(.*\\)" authors)
+      (concat (propertize (concat (match-string 1 authors) ",")
+			  'face 'notmuch-search-matching-authors)
+	      (propertize (match-string 2 authors)
+			  'face 'notmuch-search-non-matching-authors))
+    (propertize authors 'face 'notmuch-search-matching-authors)))
+
+(defun notmuch-search-insert-authors (format-string authors)
+  ;; Save the match data to avoid interfering with
+  ;; `notmuch-search-process-filter'.
+  (save-match-data
+    (let* ((formatted-authors (format format-string authors))
+	   (formatted-sample (format format-string ""))
+	   (visible-string formatted-authors)
+	   (invisible-string "")
+	   (padding ""))
+
+      ;; Truncate the author string to fit the specification.
+      (if (> (length formatted-authors)
+	     (length formatted-sample))
+	  (let ((visible-length (- (length formatted-sample)
+				   (length "... "))))
+	    ;; Truncate the visible string according to the width of
+	    ;; the display string.
+	    (setq visible-string (substring formatted-authors 0 visible-length)
+		  invisible-string (substring formatted-authors visible-length))
+	    ;; If possible, truncate the visible string at a natural
+	    ;; break (comma or pipe), as incremental search doesn't
+	    ;; match across the visible/invisible border.
+	    (when (string-match "\\(.*\\)\\([,|] \\)\\([^,|]*\\)" visible-string)
+	      ;; Second clause is destructive on `visible-string', so
+	      ;; order is important.
+	      (setq invisible-string (concat (match-string 3 visible-string)
+					     invisible-string)
+		    visible-string (concat (match-string 1 visible-string)
+					   (match-string 2 visible-string))))
+	    ;; `visible-string' may be shorter than the space allowed
+	    ;; by `format-string'. If so we must insert some padding
+	    ;; after `invisible-string'.
+	    (setq padding (make-string (- (length formatted-sample)
+					  (length visible-string)
+					  (length "..."))
+				       ? ))))
+
+      ;; Use different faces to show matching and non-matching authors.
+      (if (string-match "\\(.*\\)|\\(.*\\)" visible-string)
+	  ;; The visible string contains both matching and
+	  ;; non-matching authors.
+	  (setq visible-string (notmuch-search-author-propertize visible-string)
+		;; The invisible string must contain only non-matching
+		;; authors, as the visible-string contains both.
+		invisible-string (propertize invisible-string
+					     'face 'notmuch-search-non-matching-authors))
+	;; The visible string contains only matching authors.
+	(setq visible-string (propertize visible-string
+					 'face 'notmuch-search-matching-authors)
+	      ;; The invisible string may contain both matching and
+	      ;; non-matching authors.
+	      invisible-string (notmuch-search-author-propertize invisible-string)))
+
+      ;; If there is any invisible text, add it as a tooltip to the
+      ;; visible text.
+      (when (not (string= invisible-string ""))
+	(setq visible-string (propertize visible-string 'help-echo (concat "..." invisible-string))))
+
+      ;; Insert the visible and, if present, invisible author strings.
+      (insert visible-string)
+      (when (not (string= invisible-string ""))
+	(let ((start (point))
+	      (invis-spec (make-symbol "notmuch-search-authors"))
+	      overlay)
+	  (insert invisible-string)
+	  (add-to-invisibility-spec (cons invis-spec t))
+	  (setq overlay (make-overlay start (point)))
+	  (overlay-put overlay 'invisible invis-spec)
+	  (overlay-put overlay 'isearch-open-invisible #'notmuch-search-isearch-authors-show)))
+      (insert padding))))
 
 (defun notmuch-search-insert-field (field date count authors subject tags)
   (cond
    ((string-equal field "date")
-    (insert (format (cdr (assoc field notmuch-search-result-format)) date)))
+    (insert (propertize (format (cdr (assoc field notmuch-search-result-format)) date)
+			'face 'notmuch-search-date)))
    ((string-equal field "count")
-    (insert (format (cdr (assoc field notmuch-search-result-format)) count)))
-   ((string-equal field "authors")
-    (insert (let* ((format-string (cdr (assoc field notmuch-search-result-format)))
-		   (formatted-sample (format format-string ""))
-		   (formatted-authors (format format-string authors)))
-	      (if (> (length formatted-authors)
-		     (length formatted-sample))
-		  (concat (substring authors 0 (- (length formatted-sample) 4)) "... ")
-		formatted-authors))))
+    (insert (propertize (format (cdr (assoc field notmuch-search-result-format)) count)
+			'face 'notmuch-search-count)))
    ((string-equal field "subject")
-    (insert (format (cdr (assoc field notmuch-search-result-format)) subject)))
+    (insert (propertize (format (cdr (assoc field notmuch-search-result-format)) subject)
+			'face 'notmuch-search-subject)))
+
+   ((string-equal field "authors")
+    (notmuch-search-insert-authors (cdr (assoc field notmuch-search-result-format)) authors))
+
    ((string-equal field "tags")
     (insert (concat "(" (propertize tags 'font-lock-face 'notmuch-tag-face) ")")))))
 
@@ -611,9 +751,13 @@ matching will be applied."
 	  (save-excursion
 	    (let ((line 0)
 		  (more t)
-		  (inhibit-read-only t))
+		  (inhibit-read-only t)
+		  (string (concat notmuch-search-process-filter-data string)))
+	      (setq notmuch-search-process-filter-data nil)
 	      (while more
-		(if (string-match "^\\(thread:[0-9A-Fa-f]*\\) \\(.*\\) \\(\\[[0-9/]*\\]\\) \\([^;]*\\); \\(.*\\) (\\([^()]*\\))$" string line)
+		(while (and (< line (length string)) (= (elt string line) ?\n))
+		  (setq line (1+ line)))
+		(if (string-match "^\\(thread:[0-9A-Fa-f]*\\) \\([^][]*\\) \\(\\[[0-9/]*\\]\\) \\([^;]*\\); \\(.*\\) (\\([^()]*\\))$" string line)
 		    (let* ((thread-id (match-string 1 string))
 			   (date (match-string 2 string))
 			   (count (match-string 3 string))
@@ -622,6 +766,8 @@ matching will be applied."
 			   (tags (match-string 6 string))
 			   (tag-list (if tags (save-match-data (split-string tags)))))
 		      (goto-char (point-max))
+		      (if (/= (match-beginning 1) line)
+			  (insert (concat "Error: Unexpected output from notmuch search:\n" (substring string line (match-beginning 1)) "\n")))
 		      (let ((beg (point-marker)))
 			(notmuch-search-show-result date count authors subject tags)
 			(notmuch-search-color-line beg (point-marker) tag-list)
@@ -633,7 +779,12 @@ matching will be applied."
 			      (set 'found-target beg)
 			      (set 'notmuch-search-target-thread "found"))))
 		      (set 'line (match-end 0)))
-		  (set 'more nil)))))
+		  (set 'more nil)
+		  (while (and (< line (length string)) (= (elt string line) ?\n))
+		    (setq line (1+ line)))
+		  (if (< line (length string))
+		      (setq notmuch-search-process-filter-data (substring string line)))
+		  ))))
 	  (if found-target
 	      (goto-char found-target)))
       (delete-process proc))))
@@ -663,10 +814,16 @@ characters as well as `_.+-'.
 
 (defun notmuch-search-buffer-title (query)
   "Returns the title for a buffer with notmuch search results."
-  (let* ((saved-search (rassoc-if (lambda (key)
-				    (string-match (concat "^" (regexp-quote key))
-						  query))
-				  (reverse (notmuch-saved-searches))))
+  (let* ((saved-search
+	  (let (longest
+		(longest-length 0))
+	    (loop for tuple in notmuch-saved-searches
+		  if (let ((quoted-query (regexp-quote (cdr tuple))))
+		       (and (string-match (concat "^" quoted-query) query)
+			    (> (length (match-string 0 query))
+			       longest-length)))
+		  do (setq longest tuple))
+	    longest))
 	 (saved-search-name (car saved-search))
 	 (saved-search-query (cdr saved-search)))
     (cond ((and saved-search (equal saved-search-query query))
@@ -710,10 +867,13 @@ The optional parameters are used as follows:
       (erase-buffer)
       (goto-char (point-min))
       (save-excursion
-	(let ((proc (start-process-shell-command
-		     "notmuch-search" buffer notmuch-command "search"
-		     (if oldest-first "--sort=oldest-first" "--sort=newest-first")
-		     (shell-quote-argument query))))
+	(let ((proc (start-process
+		     "notmuch-search" buffer
+		     notmuch-command "search"
+		     (if oldest-first
+			 "--sort=oldest-first"
+		       "--sort=newest-first")
+		     query)))
 	  (set-process-sentinel proc 'notmuch-search-process-sentinel)
 	  (set-process-filter proc 'notmuch-search-process-filter))))
     (run-hooks 'notmuch-search-hook)))
@@ -732,7 +892,7 @@ same relative position within the new buffer."
 	(target-thread (notmuch-search-find-thread-id))
 	(query notmuch-search-query-string)
 	(continuation notmuch-search-continuation))
-    (kill-this-buffer)
+    (notmuch-kill-this-buffer)
     (notmuch-search query oldest-first target-thread target-line continuation)
     (goto-char (point-min))))
 

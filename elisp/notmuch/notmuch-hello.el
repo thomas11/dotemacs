@@ -19,9 +19,9 @@
 ;;
 ;; Authors: David Edmondson <dme@dme.org>
 
+(eval-when-compile (require 'cl))
 (require 'widget)
 (require 'wid-edit) ; For `widget-forward'.
-(require 'cl)
 
 (require 'notmuch-lib)
 (require 'notmuch-mua)
@@ -65,6 +65,39 @@
   "Background colour for the notmuch logo."
   :group 'notmuch)
 
+(defcustom notmuch-column-control t
+  "Controls the number of columns for saved searches/tags in notmuch view.
+
+This variable has three potential sets of values:
+
+- t: automatically calculate the number of columns possible based
+  on the tags to be shown and the window width,
+- an integer: a lower bound on the number of characters that will
+  be used to display each column,
+- a float: a fraction of the window width that is the lower bound
+  on the number of characters that should be used for each
+  column.
+
+So:
+- if you would like two columns of tags, set this to 0.5.
+- if you would like a single column of tags, set this to 1.0.
+- if you would like tags to be 30 characters wide, set this to
+  30.
+- if you don't want to worry about all of this nonsense, leave
+  this set to `t'."
+  :group 'notmuch
+  :type '(choice
+	  (const :tag "Automatically calculated" t)
+	  (integer :tag "Number of characters")
+	  (float :tag "Fraction of window")))
+
+(defcustom notmuch-decimal-separator ","
+  "The string used as a decimal separator.
+
+Typically \",\" in the US and UK and \".\" in Europe."
+  :group 'notmuch
+  :type 'string)
+
 (defvar notmuch-hello-url "http://notmuchmail.org"
   "The `notmuch' web site.")
 
@@ -76,6 +109,18 @@
   (if (> (length notmuch-hello-recent-searches)
 	 notmuch-recent-searches-max)
       (setq notmuch-hello-recent-searches (butlast notmuch-hello-recent-searches))))
+
+(defun notmuch-hello-nice-number (n)
+  (let (result)
+    (while (> n 0)
+      (push (% n 1000) result)
+      (setq n (/ n 1000)))
+    (setq result (or result '(0)))
+    (apply #'concat
+     (number-to-string (car result))
+     (mapcar (lambda (elem)
+	      (format "%s%03d" notmuch-decimal-separator elem))
+	     (cdr result)))))
 
 (defun notmuch-hello-trim (search)
   "Trim whitespace."
@@ -113,11 +158,6 @@
 	    maximize (length (car elem)))
       0))
 
-(defun notmuch-hello-roundup (dividend divisor)
-  "Return the rounded up value of dividing `dividend' by `divisor'."
-  (+ (/ dividend divisor)
-     (if (> (% dividend divisor) 0) 1 0)))
-
 (defun notmuch-hello-reflect-generate-row (ncols nrows row list)
   (let ((len (length list)))
     (loop for col from 0 to (- ncols 1)
@@ -133,7 +173,7 @@
   "Reflect a `ncols' wide matrix represented by `list' along the
 diagonal."
   ;; Not very lispy...
-  (let ((nrows (notmuch-hello-roundup (length list) ncols)))
+  (let ((nrows (ceiling (length list) ncols)))
     (loop for row from 0 to (- nrows 1)
 	  append (notmuch-hello-reflect-generate-row ncols nrows row list))))
 
@@ -146,13 +186,42 @@ diagonal."
 (defun notmuch-saved-search-count (search)
   (car (process-lines notmuch-command "count" search)))
 
+(defun notmuch-hello-tags-per-line (widest)
+  "Determine how many tags to show per line and how wide they
+should be. Returns a cons cell `(tags-per-line width)'."
+  (let ((tags-per-line
+	 (cond
+	  ((integerp notmuch-column-control)
+	   (max 1
+		(/ (- (window-width) notmuch-hello-indent)
+		   ;; Count is 9 wide (8 digits plus space), 1 for the space
+		   ;; after the name.
+		   (+ 9 1 (max notmuch-column-control widest)))))
+
+	  ((floatp notmuch-column-control)
+	   (let* ((available-width (- (window-width) notmuch-hello-indent))
+		  (proposed-width (max (* available-width notmuch-column-control) widest)))
+	     (floor available-width proposed-width)))
+
+	  (t
+	   (max 1
+		(/ (- (window-width) notmuch-hello-indent)
+		   ;; Count is 9 wide (8 digits plus space), 1 for the space
+		   ;; after the name.
+		   (+ 9 1 widest)))))))
+
+    (cons tags-per-line (/ (max 1
+				(- (window-width) notmuch-hello-indent
+				   ;; Count is 9 wide (8 digits plus
+				   ;; space), 1 for the space after the
+				   ;; name.
+				   (* tags-per-line (+ 9 1))))
+			   tags-per-line))))
+
 (defun notmuch-hello-insert-tags (tag-alist widest target)
-  (let* ((tags-per-line (max 1
-			     (/ (- (window-width) notmuch-hello-indent)
-				;; Count is 7 wide (6 digits plus
-				;; space), 1 for the space after the
-				;; name.
-				(+ 7 1 widest))))
+  (let* ((tags-and-width (notmuch-hello-tags-per-line widest))
+	 (tags-per-line (car tags-and-width))
+	 (widest (cdr tags-and-width))
 	 (count 0)
 	 (reordered-list (notmuch-hello-reflect tag-alist tags-per-line))
 	 ;; Hack the display of the buttons used.
@@ -167,7 +236,9 @@ diagonal."
 	      (let* ((name (car elem))
 		     (query (cdr elem))
 		     (formatted-name (format "%s " name)))
-		(widget-insert (format "%6s " (notmuch-saved-search-count query)))
+		(widget-insert (format "%8s "
+				       (notmuch-hello-nice-number
+					(string-to-number (notmuch-saved-search-count query)))))
 		(if (string= formatted-name target)
 		    (setq found-target-pos (point-marker)))
 		(widget-create 'push-button
@@ -180,7 +251,9 @@ diagonal."
 		;; can just insert `(- widest (length name))' spaces -
 		;; the column separator is included in the button if
 		;; `(equal widest (length name)'.
-		(widget-insert (make-string (- widest (length name)) ? ))))
+		(widget-insert (make-string (max 1
+						 (- widest (length name)))
+					    ? ))))
 	    (setq count (1+ count))
 	    (if (eq (% count tags-per-line) 0)
 		(widget-insert "\n")))
@@ -203,6 +276,7 @@ diagonal."
   (notmuch-hello-update t))
 
 (defun notmuch-hello-update (&optional no-display)
+  "Update the current notmuch view."
   ;; Lazy - rebuild everything.
   (interactive)
   (notmuch-hello no-display))
@@ -213,7 +287,40 @@ diagonal."
   (notmuch-poll)
   (notmuch-hello-update))
 
+
+(defvar notmuch-hello-mode-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map widget-keymap)
+    (define-key map "v" '(lambda () "Display the notmuch version" (interactive)
+                           (message "notmuch version %s" (notmuch-version))))
+    (define-key map "?" 'notmuch-help)
+    (define-key map "q" 'notmuch-kill-this-buffer)
+    (define-key map "=" 'notmuch-hello-update)
+    (define-key map "G" 'notmuch-hello-poll-and-update)
+    (define-key map (kbd "<C-tab>") 'widget-backward)
+    (define-key map "m" 'notmuch-mua-mail)
+    (define-key map "s" 'notmuch-hello-goto-search)
+    map)
+  "Keymap for \"notmuch hello\" buffers.")
+(fset 'notmuch-hello-mode-map notmuch-hello-mode-map)
+
+(defun notmuch-hello-mode ()
+ "Major mode for convenient notmuch navigation. This is your entry portal into notmuch.
+
+Complete list of currently available key bindings:
+
+\\{notmuch-hello-mode-map}"
+ (interactive)
+ (kill-all-local-variables)
+ (use-local-map notmuch-hello-mode-map)
+ (setq major-mode 'notmuch-hello-mode
+       mode-name "notmuch-hello")
+ ;;(setq buffer-read-only t)
+)
+
+;;;###autoload
 (defun notmuch-hello (&optional no-display)
+  "Run notmuch and display saved searches, known tags, etc."
   (interactive)
 
   ; Jump through a hoop to get this value from the deprecated variable
@@ -236,6 +343,9 @@ diagonal."
     (kill-all-local-variables)
     (let ((inhibit-read-only t))
       (erase-buffer))
+
+    (unless (eq major-mode 'notmuch-hello-mode)
+      (notmuch-hello-mode))
 
     (let ((all (overlay-lists)))
       ;; Delete all the overlays.
@@ -272,8 +382,9 @@ diagonal."
 		     :notify (lambda (&rest ignore)
 			       (notmuch-hello-update))
 		     :help-echo "Refresh"
-		     (car (process-lines notmuch-command "count")))
-      (widget-insert " messages (that's not much mail).\n\n"))
+		     (notmuch-hello-nice-number
+		      (string-to-number (car (process-lines notmuch-command "count")))))
+      (widget-insert " messages.\n"))
 
     (let ((found-target-pos nil)
 	  (final-target-pos nil))
@@ -292,7 +403,7 @@ diagonal."
 	     (widest (max saved-widest alltags-widest)))
 
 	(when saved-alist
-	  (widget-insert "Saved searches: ")
+	  (widget-insert "\nSaved searches: ")
 	  (widget-create 'push-button
 			 :notify (lambda (&rest ignore)
 				   (customize-variable 'notmuch-saved-searches))
@@ -305,18 +416,16 @@ diagonal."
 		(setq final-target-pos found-target-pos))
 	    (indent-rigidly start (point) notmuch-hello-indent)))
 
-	(let ((start (point)))
-	  (widget-insert "\nSearch: ")
-	  (setq notmuch-hello-search-bar-marker (point-marker))
-	  (widget-create 'editable-field
-			 ;; Leave some space at the start and end of the
-			 ;; search boxes.
-			 :size (max 8 (- (window-width) (* 2 notmuch-hello-indent)
-					 (length "Search: ")))
-			 :action (lambda (widget &rest ignore)
-				   (notmuch-hello-search (widget-value widget))))
-	  (widget-insert "\n")
-	  (indent-rigidly start (point) notmuch-hello-indent))
+	(widget-insert "\nSearch: ")
+	(setq notmuch-hello-search-bar-marker (point-marker))
+	(widget-create 'editable-field
+		       ;; Leave some space at the start and end of the
+		       ;; search boxes.
+		       :size (max 8 (- (window-width) notmuch-hello-indent
+				       (length "Search: ")))
+		       :action (lambda (widget &rest ignore)
+				 (notmuch-hello-search (widget-value widget))))
+	(widget-insert "\n")
 
 	(when notmuch-hello-recent-searches
 	  (widget-insert "\nRecent searches: ")
@@ -397,22 +506,16 @@ diagonal."
 	(let ((fill-column (- (window-width) notmuch-hello-indent)))
 	  (center-region start (point))))
 
-      (use-local-map widget-keymap)
-      (local-set-key "=" 'notmuch-hello-update)
-      (local-set-key "G" 'notmuch-hello-poll-and-update)
-      (local-set-key "m" 'notmuch-mua-mail)
-      (local-set-key "q" '(lambda () (interactive) (kill-buffer (current-buffer))))
-      (local-set-key "s" 'notmuch-hello-goto-search)
-      (local-set-key "v" '(lambda () (interactive)
-			    (message "notmuch version %s" (notmuch-version))))
-
       (widget-setup)
 
-      (goto-char final-target-pos)
-      (if (not (widget-at))
-	  (widget-forward 1)))))
+      (when final-target-pos
+	(goto-char final-target-pos)
+	(unless (widget-at)
+	  (widget-forward 1)))
 
-;;;###autoload
+      (unless (widget-at)
+	(notmuch-hello-goto-search)))))
+
 (defun notmuch-folder ()
   "Deprecated function for invoking notmuch---calling `notmuch' is preferred now."
   (interactive)

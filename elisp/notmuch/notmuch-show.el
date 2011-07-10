@@ -21,7 +21,7 @@
 ;; Authors: Carl Worth <cworth@cworth.org>
 ;;          David Edmondson <dme@dme.org>
 
-(require 'cl)
+(eval-when-compile (require 'cl))
 (require 'mm-view)
 (require 'message)
 (require 'mm-decode)
@@ -58,6 +58,11 @@ any given message."
   :group 'notmuch
   :type 'boolean)
 
+(defcustom notmuch-show-relative-dates t
+  "Display relative dates in the message summary line."
+  :group 'notmuch
+  :type 'boolean)
+
 (defvar notmuch-show-markup-headers-hook '(notmuch-show-colour-headers)
   "A list of functions called to decorate the headers listed in
 `notmuch-message-headers'.")
@@ -80,10 +85,10 @@ any given message."
 (defmacro with-current-notmuch-show-message (&rest body)
   "Evaluate body with current buffer set to the text of current message"
   `(save-excursion
-     (let ((filename (notmuch-show-get-filename)))
-       (let ((buf (generate-new-buffer (concat "*notmuch-msg-" filename "*"))))
+     (let ((id (notmuch-show-get-message-id)))
+       (let ((buf (generate-new-buffer (concat "*notmuch-msg-" id "*"))))
          (with-current-buffer buf
-           (insert-file-contents filename nil nil nil t)
+	    (call-process notmuch-command nil t nil "show" "--format=raw" id)
            ,@body)
 	 (kill-buffer buf)))))
 
@@ -189,7 +194,8 @@ any given message."
     (if (re-search-forward "(\\([^()]*\\))$" (line-end-position) t)
 	(let ((inhibit-read-only t))
 	  (replace-match (concat "("
-				 (mapconcat 'identity tags " ")
+				 (propertize (mapconcat 'identity tags " ")
+					     'face 'notmuch-tag-face)
 				 ")"))))))
 
 (defun notmuch-show-insert-headerline (headers date tags depth)
@@ -201,7 +207,8 @@ message at DEPTH in the current thread."
 	    " ("
 	    date
 	    ") ("
-	    (mapconcat 'identity tags " ")
+	    (propertize (mapconcat 'identity tags " ")
+			'face 'notmuch-tag-face)
 	    ")\n")
     (overlay-put (make-overlay start (point)) 'face 'notmuch-message-summary-face)))
 
@@ -374,17 +381,24 @@ current buffer, if possible."
 (defun notmuch-show-make-symbol (type)
   (make-symbol (concat "notmuch-show-" type)))
 
+(defun notmuch-show-strip-re (string)
+  (replace-regexp-in-string "\\([Rr]e: *\\)+" "" string))
+
+(defvar notmuch-show-previous-subject "")
+(make-variable-buffer-local 'notmuch-show-previous-subject)
+
 (defun notmuch-show-insert-msg (msg depth)
   "Insert the message MSG at depth DEPTH in the current thread."
-  (let ((headers (plist-get msg :headers))
-	;; Indentation causes the buffer offset of the start/end
-	;; points to move, so we must use markers.
-	message-start message-end
-	content-start content-end
-	headers-start headers-end
-	body-start body-end
-	(headers-invis-spec (notmuch-show-make-symbol "header"))
-	(message-invis-spec (notmuch-show-make-symbol "message")))
+  (let* ((headers (plist-get msg :headers))
+	 ;; Indentation causes the buffer offset of the start/end
+	 ;; points to move, so we must use markers.
+	 message-start message-end
+	 content-start content-end
+	 headers-start headers-end
+	 body-start body-end
+	 (headers-invis-spec (notmuch-show-make-symbol "header"))
+	 (message-invis-spec (notmuch-show-make-symbol "message"))
+	 (bare-subject (notmuch-show-strip-re (plist-get headers :Subject))))
 
     ;; Set `buffer-invisibility-spec' to `nil' (a list), otherwise
     ;; removing items from `buffer-invisibility-spec' (which is what
@@ -405,7 +419,9 @@ current buffer, if possible."
     (setq message-start (point-marker))
 
     (notmuch-show-insert-headerline headers
-				    (or (plist-get msg :date_relative)
+				    (or (if notmuch-show-relative-dates
+					    (plist-get msg :date_relative)
+					  nil)
 					(plist-get headers :Date))
 				    (plist-get msg :tags) depth)
 
@@ -419,9 +435,16 @@ current buffer, if possible."
     (insert "\n")
     (save-excursion
       (goto-char content-start)
-      (forward-line 1)
+      ;; If the subject of this message is the same as that of the
+      ;; previous message, don't display it when this message is
+      ;; collapsed.
+      (when (not (string= notmuch-show-previous-subject
+			  bare-subject))
+	(forward-line 1))
       (setq headers-start (point-marker)))
     (setq headers-end (point-marker))
+
+    (setq notmuch-show-previous-subject bare-subject)
 
     (setq body-start (point-marker))
     (notmuch-show-insert-body msg (plist-get msg :body) depth)
@@ -527,6 +550,10 @@ function is used. "
     ;; Move straight to the first open message
     (if (not (notmuch-show-message-visible-p))
 	(notmuch-show-next-open-message))
+
+    ;; Set the header line to the subject of the first open message.
+    (setq header-line-format (notmuch-show-strip-re (notmuch-show-get-subject)))
+
     (notmuch-show-mark-read)))
 
 (defvar notmuch-show-stash-map
@@ -546,8 +573,10 @@ function is used. "
 (defvar notmuch-show-mode-map
       (let ((map (make-sparse-keymap)))
 	(define-key map "?" 'notmuch-help)
-	(define-key map "q" 'kill-this-buffer)
+	(define-key map "q" 'notmuch-kill-this-buffer)
+	(define-key map (kbd "<C-tab>") 'widget-backward)
 	(define-key map (kbd "M-TAB") 'notmuch-show-previous-button)
+	(define-key map (kbd "<backtab>") 'notmuch-show-previous-button)
 	(define-key map (kbd "TAB") 'notmuch-show-next-button)
 	(define-key map "s" 'notmuch-search)
 	(define-key map "m" 'notmuch-mua-mail)
@@ -575,7 +604,6 @@ function is used. "
       "Keymap for \"notmuch show\" buffers.")
 (fset 'notmuch-show-mode-map notmuch-show-mode-map)
 
-;;;###autoload
 (defun notmuch-show-mode ()
   "Major mode for viewing a thread with notmuch.
 
@@ -586,21 +614,17 @@ By default, various components of email messages, (citations,
 signatures, already-read messages), are hidden. You can make
 these parts visible by clicking with the mouse button or by
 pressing RET after positioning the cursor on a hidden part, (for
-which \\[notmuch-show-next-button] and
-\\[notmuch-show-previous-button] are helpful).
+which \\[notmuch-show-next-button] and \\[notmuch-show-previous-button] are helpful).
 
 Reading the thread sequentially is well-supported by pressing
-\\[notmuch-show-advance-and-archive]. This will scroll the
-current message (if necessary), advance to the next message, or
-advance to the next thread (if already on the last message of a
-thread).
+\\[notmuch-show-advance-and-archive]. This will scroll the current message (if necessary), advance
+to the next message, or advance to the next thread (if already on
+the last message of a thread).
 
 Other commands are available to read or manipulate the thread
-more selectively, (such as '\\[notmuch-show-next-message]' and
-'\\[notmuch-show-previous-message]' to advance to messages
-without removing any tags, and '\\[notmuch-show-archive-thread]'
-to archive an entire thread without scrolling through with
-\\[notmuch-show-advance-and-archive]).
+more selectively, (such as '\\[notmuch-show-next-message]' and '\\[notmuch-show-previous-message]' to advance to messages
+without removing any tags, and '\\[notmuch-show-archive-thread]' to archive an entire thread
+without scrolling through with \\[notmuch-show-advance-and-archive]).
 
 You can add or remove arbitary tags from the current message with
 '\\[notmuch-show-add-tag]' or '\\[notmuch-show-remove-tag]'.
@@ -719,7 +743,7 @@ All currently available key bindings:
 
 (defun notmuch-show-get-message-id ()
   "Return the message id of the current message."
-  (concat "id:" (notmuch-show-get-prop :id)))
+  (concat "id:\"" (notmuch-show-get-prop :id) "\""))
 
 ;; dme: Would it make sense to use a macro for many of these?
 
@@ -766,6 +790,22 @@ All currently available key bindings:
 (defun notmuch-show-mark-read ()
   "Mark the current message as read."
   (notmuch-show-remove-tag "unread"))
+
+;; Functions for getting attributes of several messages in the current
+;; thread.
+
+(defun notmuch-show-get-message-ids-for-open-messages ()
+  "Return a list of all message IDs for open messages in the current thread."
+  (save-excursion
+    (let (message-ids done)
+      (goto-char (point-min))
+      (while (not done)
+	(if (notmuch-show-message-visible-p)
+	    (setq message-ids (append message-ids (list (notmuch-show-get-message-id)))))
+	(setq done (not (notmuch-show-goto-message-next)))
+	)
+      message-ids
+      )))
 
 ;; Commands typically bound to keys.
 
@@ -895,42 +935,97 @@ any effects from previous calls to
 (defun notmuch-show-view-raw-message ()
   "View the file holding the current message."
   (interactive)
-  (view-file (notmuch-show-get-filename)))
+  (let* ((id (notmuch-show-get-message-id))
+	 (buf (get-buffer-create (concat "*notmuch-raw-" id "*"))))
+    (call-process notmuch-command nil buf nil "show" "--format=raw" id)
+    (switch-to-buffer buf)
+    (goto-char (point-min))
+    (set-buffer-modified-p nil)
+    (view-buffer buf 'kill-buffer-if-not-modified)))
 
-(defun notmuch-show-pipe-message (command)
-  "Pipe the contents of the current message to the given command.
+(defun notmuch-show-pipe-message (entire-thread command)
+  "Pipe the contents of the current message (or thread) to the given command.
 
 The given command will be executed with the raw contents of the
 current email message as stdin. Anything printed by the command
-to stdout or stderr will appear in the *Messages* buffer."
-  (interactive "sPipe message to command: ")
-  (apply 'start-process-shell-command "notmuch-pipe-command" "*notmuch-pipe*"
-	 (list command " < "
-	       (shell-quote-argument (notmuch-show-get-filename)))))
+to stdout or stderr will appear in the *notmuch-pipe* buffer.
+
+When invoked with a prefix argument, the command will receive all
+open messages in the current thread (formatted as an mbox) rather
+than only the current message."
+  (interactive "P\nsPipe message to command: ")
+  (let (shell-command)
+    (if entire-thread
+	(setq shell-command 
+	      (concat notmuch-command " show --format=mbox "
+		      (shell-quote-argument
+		       (mapconcat 'identity (notmuch-show-get-message-ids-for-open-messages) " OR "))
+		      " | " command))
+      (setq shell-command
+	    (concat notmuch-command " show --format=raw "
+		    (shell-quote-argument (notmuch-show-get-message-id)) " | " command)))
+    (let ((buf (get-buffer-create (concat "*notmuch-pipe*"))))
+      (with-current-buffer buf
+	(setq buffer-read-only nil)
+	(erase-buffer)
+	(let ((exit-code (call-process-shell-command shell-command nil buf)))
+	  (goto-char (point-max))
+	  (set-buffer-modified-p nil)
+	  (setq buffer-read-only t)
+	  (unless (zerop exit-code)
+	    (switch-to-buffer-other-window buf)
+	    (message (format "Command '%s' exited abnormally with code %d"
+			     shell-command exit-code))))))))
+
+(defun notmuch-show-add-tags-worker (current-tags add-tags)
+  "Add to `current-tags' with any tags from `add-tags' not
+currently present and return the result."
+  (let ((result-tags (copy-sequence current-tags)))
+    (mapc (lambda (add-tag)
+	    (unless (member add-tag current-tags)
+	      (setq result-tags (push add-tag result-tags))))
+	    add-tags)
+    (sort result-tags 'string<)))
+
+(defun notmuch-show-del-tags-worker (current-tags del-tags)
+  "Remove any tags in `del-tags' from `current-tags' and return
+the result."
+  (let ((result-tags (copy-sequence current-tags)))
+    (mapc (lambda (del-tag)
+	    (setq result-tags (delete del-tag result-tags)))
+	  del-tags)
+    result-tags))
 
 (defun notmuch-show-add-tag (&rest toadd)
   "Add a tag to the current message."
   (interactive
    (list (notmuch-select-tag-with-completion "Tag to add: ")))
-  (apply 'notmuch-call-notmuch-process
-	 (append (cons "tag"
-		       (mapcar (lambda (s) (concat "+" s)) toadd))
-		 (cons (notmuch-show-get-message-id) nil)))
-  (notmuch-show-set-tags (sort (union toadd (notmuch-show-get-tags) :test 'string=) 'string<)))
+
+  (let* ((current-tags (notmuch-show-get-tags))
+	 (new-tags (notmuch-show-add-tags-worker current-tags toadd)))
+
+    (unless (equal current-tags new-tags)
+      (apply 'notmuch-call-notmuch-process
+	     (append (cons "tag"
+			   (mapcar (lambda (s) (concat "+" s)) toadd))
+		     (cons (notmuch-show-get-message-id) nil)))
+      (notmuch-show-set-tags new-tags))))
 
 (defun notmuch-show-remove-tag (&rest toremove)
   "Remove a tag from the current message."
   (interactive
    (list (notmuch-select-tag-with-completion
 	  "Tag to remove: " (notmuch-show-get-message-id))))
-  (let ((tags (notmuch-show-get-tags)))
-    (if (intersection tags toremove :test 'string=)
-	(progn
-	  (apply 'notmuch-call-notmuch-process
-		 (append (cons "tag"
-			       (mapcar (lambda (s) (concat "-" s)) toremove))
-			 (cons (notmuch-show-get-message-id) nil)))
-	  (notmuch-show-set-tags (sort (set-difference tags toremove :test 'string=) 'string<))))))
+
+  (let* ((current-tags (notmuch-show-get-tags))
+	 (new-tags (notmuch-show-del-tags-worker current-tags toremove)))
+
+    (unless (equal current-tags new-tags)
+      (apply 'notmuch-call-notmuch-process
+	     (append (cons "tag"
+			   (mapcar (lambda (s) (concat "-" s)) toremove))
+		     (cons (notmuch-show-get-message-id) nil)))
+      (notmuch-show-set-tags new-tags))))
 
 (defun notmuch-show-toggle-headers ()
   "Toggle the visibility of the current message headers."
@@ -979,7 +1074,7 @@ argument, hide all of the messages."
 	until (not (notmuch-show-goto-message-next)))
   ;; Move to the next item in the search results, if any.
   (let ((parent-buffer notmuch-show-parent-buffer))
-    (kill-this-buffer)
+    (notmuch-kill-this-buffer)
     (if parent-buffer
 	(progn
 	  (switch-to-buffer parent-buffer)
@@ -1006,49 +1101,45 @@ buffer."
   (interactive)
   (notmuch-show-archive-thread-internal nil))
 
-(defun notmuch-show-do-stash (text)
-  (kill-new text)
-  (message "Saved: %s" text))
-
 (defun notmuch-show-stash-cc ()
   "Copy CC field of current message to kill-ring."
   (interactive)
-  (notmuch-show-do-stash (notmuch-show-get-cc)))
+  (notmuch-common-do-stash (notmuch-show-get-cc)))
 
 (defun notmuch-show-stash-date ()
   "Copy date of current message to kill-ring."
   (interactive)
-  (notmuch-show-do-stash (notmuch-show-get-date)))
+  (notmuch-common-do-stash (notmuch-show-get-date)))
 
 (defun notmuch-show-stash-filename ()
   "Copy filename of current message to kill-ring."
   (interactive)
-  (notmuch-show-do-stash (notmuch-show-get-filename)))
+  (notmuch-common-do-stash (notmuch-show-get-filename)))
 
 (defun notmuch-show-stash-from ()
   "Copy From address of current message to kill-ring."
   (interactive)
-  (notmuch-show-do-stash (notmuch-show-get-from)))
+  (notmuch-common-do-stash (notmuch-show-get-from)))
 
 (defun notmuch-show-stash-message-id ()
   "Copy message ID of current message to kill-ring."
   (interactive)
-  (notmuch-show-do-stash (notmuch-show-get-message-id)))
+  (notmuch-common-do-stash (notmuch-show-get-message-id)))
 
 (defun notmuch-show-stash-subject ()
   "Copy Subject field of current message to kill-ring."
   (interactive)
-  (notmuch-show-do-stash (notmuch-show-get-subject)))
+  (notmuch-common-do-stash (notmuch-show-get-subject)))
 
 (defun notmuch-show-stash-tags ()
   "Copy tags of current message to kill-ring as a comma separated list."
   (interactive)
-  (notmuch-show-do-stash (mapconcat 'identity (notmuch-show-get-tags) ",")))
+  (notmuch-common-do-stash (mapconcat 'identity (notmuch-show-get-tags) ",")))
 
 (defun notmuch-show-stash-to ()
   "Copy To address of current message to kill-ring."
   (interactive)
-  (notmuch-show-do-stash (notmuch-show-get-to)))
+  (notmuch-common-do-stash (notmuch-show-get-to)))
 
 ;; Commands typically bound to buttons.
 

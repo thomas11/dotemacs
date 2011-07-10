@@ -68,6 +68,37 @@ the user hasn't set this variable with the old or new value."
 	(match-string 2 long-string)
       "unknown")))
 
+(defun notmuch-config-get (item)
+  "Return a value from the notmuch configuration."
+  ;; Trim off the trailing newline
+  (substring (shell-command-to-string
+	      (concat notmuch-command " config get " item))
+	      0 -1))
+
+(defun notmuch-database-path ()
+  "Return the database.path value from the notmuch configuration."
+  (notmuch-config-get "database.path"))
+
+(defun notmuch-user-name ()
+  "Return the user.name value from the notmuch configuration."
+  (notmuch-config-get "user.name"))
+
+(defun notmuch-user-primary-email ()
+  "Return the user.primary_email value from the notmuch configuration."
+  (notmuch-config-get "user.primary_email"))
+
+(defun notmuch-kill-this-buffer ()
+  "Kill the current buffer."
+  (interactive)
+  (kill-buffer (current-buffer)))
+
+;;
+
+(defun notmuch-common-do-stash (text)
+  "Common function to stash text in kill ring, and display in minibuffer."
+  (kill-new text)
+  (message "Stashed: %s" text))
+
 ;;
 
 ;; XXX: This should be a generic function in emacs somewhere, not
@@ -85,4 +116,29 @@ within the current window."
       (or (memq prop buffer-invisibility-spec)
 	  (assq prop buffer-invisibility-spec)))))
 
+;; Compatibility functions for versions of emacs before emacs 23.
+;;
+;; Both functions here were copied from emacs 23 with the following copyright:
+;;
+;; Copyright (C) 1985, 1986, 1992, 1994, 1995, 1999, 2000, 2001, 2002, 2003,
+;;   2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
+;;
+;; and under the GPL version 3 (or later) exactly as notmuch itself.
+(when (< emacs-major-version 23)
+  (defun apply-partially (fun &rest args)
+  "Return a function that is a partial application of FUN to ARGS.
+ARGS is a list of the first N arguments to pass to FUN.
+The result is a new function which does the same as FUN, except that
+the first N arguments are fixed at the values with which this function
+was called."
+  (lexical-let ((fun fun) (args1 args))
+    (lambda (&rest args2) (apply fun (append args1 args2)))))
+
+  (defun mouse-event-p (object)
+  "Return non-nil if OBJECT is a mouse click event."
+  (memq (event-basic-type object) '(mouse-1 mouse-2 mouse-3 mouse-movement))))
+
+
+
 (provide 'notmuch-lib)
+
