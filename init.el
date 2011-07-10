@@ -52,8 +52,8 @@
 (if (string-match "linux" system-configuration)
     (progn
       (setq browse-url-browser-function 'browse-url-generic
-            browse-url-generic-program "chromium")
-      (custom-set-faces '(default ((t (:height 101 :family "Inconsolata")))))))
+            browse-url-generic-program "firefox")
+      (custom-set-faces '(default ((t (:height 124 :family "Inconsolata")))))))
 
 
 (defun s5-build-slides ()
