@@ -3,6 +3,8 @@
 ;; 2010-04-21, for emacsclient
 (server-start)
 
+(prefer-coding-system 'utf-8)
+
 (setq user-mail-address "tkappler@gmail.com")
 (setq message-send-mail-function 'smtpmail-send-it
       smtpmail-starttls-credentials '(("smtp.gmail.com" 587 nil nil))
@@ -11,7 +13,6 @@
       smtpmail-smtp-server "smtp.gmail.com"
       smtpmail-smtp-service 587
       smtpmail-local-domain "thomas.foo")
-
 
 ;; Set load-path, including subdirectories.
 ;; 2009-04-18 from http://www.emacswiki.org/emacs/LoadPath
