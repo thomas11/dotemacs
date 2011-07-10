@@ -435,7 +435,9 @@ line."
 (add-to-list 'auto-mode-alist '("\\.pm$" . perl-mode))
 
 (defun thomas11-perl-indent-setup ()
-  (setq cperl-indent-level 4))
+  (setq cperl-indent-level 4
+        cperl-close-paren-offset -2
+        cperl-indent-parens-as-block t))
 (add-hook 'cperl-mode-hook 'thomas11-perl-indent-setup)
 
 ;; Devel::PerlySense, 2010-07-23
