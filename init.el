@@ -214,11 +214,30 @@ vertical windows."
 
 ;;; Stefan Monnier <foo at acm.org>. It is the opposite of
 ;;; fill-paragraph.
-(defun unfill-paragraph ()
+(defun my-unfill-paragraph ()
   "Takes a multi-line paragraph and makes it into a single line of text."
   (interactive)
   (let ((fill-column (point-max)))
     (fill-paragraph nil)))
+
+;; Comment and uncomment lines. From
+;; http://www.emacswiki.org/emacs/CommentingCode.
+;; Original idea from
+;; http://www.opensubscriber.com/message/emacs-devel@gnu.org/10971693.html
+(defun my-comment-dwim-line (&optional arg)
+  "Replacement for the comment-dwim command.
+If no region is selected and current line is not blank and we are not at
+the end of the line, then comment current line. Replaces default behaviour
+of comment-dwim, when it inserts comment at the end of the line."
+  (interactive "*P")
+  (comment-normalize-vars)
+  (if (and (not (region-active-p)) (not (looking-at "[ \t]*$")))
+      (progn
+        (comment-or-uncomment-region (line-beginning-position) (line-end-position))
+        (forward-line 1))
+    (comment-dwim arg)))
+
+(global-set-key "\M-7" 'my-comment-dwim-line)
 
 
 ;; 2010-09-10
