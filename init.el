@@ -136,6 +136,8 @@ vertical windows."
 (setq-default indent-tabs-mode nil) ; no tabs
 (ffap-bindings) ; find-file-at-point
 (blink-cursor-mode 0)
+(setq x-select-enable-clipboard t)
+
 
 ;; 2009-11-14 md-readme. List emacs projects on github so they are set
 ;; up for auto-generating their README.md.
