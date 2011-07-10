@@ -326,7 +326,7 @@ line."
 
 ;;; ERLANG ;;;
 
-(load-file "/usr/share/emacs/site-lisp/erlang.el")
+(load-file "/usr/share/emacs/site-lisp/erlang/erlang.el")
 (require 'erlang-start)
 (add-to-list 'auto-mode-alist '("\\.erl?$" . erlang-mode))
 (add-to-list 'auto-mode-alist '("\\.hrl?$" . erlang-mode))
