@@ -44,18 +44,7 @@
       (add-to-list Info-additional-directory-list '("/sw/share/info"))
 
       ;; 2009-07-20 iTunes control from http://www.emacswiki.org/emacs/itunes.el
-      (require 'itunes)
-
-      ;; "fix" the broken keyboard. 
-      ;; 2009-03-17 from http://www.emacswiki.org/emacs/EmacsOnGermanMac
-      (global-set-key "\M-l" '(lambda () (interactive) (insert "@")))
-      (global-set-key "\M-5" '(lambda () (interactive) (insert "[")))
-      (global-set-key "\M-6" '(lambda () (interactive) (insert "]")))
-      (global-set-key "\M-7" '(lambda () (interactive) (insert "|")))
-      (global-set-key "\M-/" '(lambda () (interactive) (insert "\\")))
-      (global-set-key "\M-8" '(lambda () (interactive) (insert "{")))
-      (global-set-key "\M-9" '(lambda () (interactive) (insert "}")))
-      (global-set-key "\M-n" '(lambda () (interactive) (insert "~")))))
+      (require 'itunes)))
 
 ;; Nice anti-aliased fonts on Linux. Works out of the box since 23.1.
 ;; Also needs "Emacs.FontBackend: xft" in ~/.Xresources.
