@@ -422,6 +422,12 @@ line."
 (add-hook 'markdown-mode-hook '(lambda() (markdown-custom)))
 
 
+;; OCaml
+(add-to-list 'auto-mode-alist '("\\.ml[iylp]?" . tuareg-mode))
+(autoload 'tuareg-mode "tuareg" "Major mode for editing Caml code" t)
+(autoload 'camldebug "camldebug" "Run the Caml debugger" t)
+
+
 ;;; PERL ;;;
 
 (defalias 'perl-mode 'cperl-mode)
