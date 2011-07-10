@@ -458,6 +458,11 @@ line."
 ;;                (perltidy-region)))
 
 
+;; Zeitgeist from
+;; https://code.launchpad.net/~patrickniedzielski/zeitgeist-dataproviders/emacs-zeitgeist
+(load-library "zeitgeist.elc")
+
+
 (custom-set-variables
   ;; custom-set-variables was added by Custom.
   ;; If you edit it by hand, you could mess it up, so be careful.
