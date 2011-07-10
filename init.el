@@ -21,7 +21,11 @@
     (progn (cd "~/.emacs.d/")
            (normal-top-level-add-subdirs-to-load-path)
            (cd "~/Dropbox")))
-(add-to-list 'load-path "/usr/share/emacs/site-lisp")
+(add-to-list 'load-path "/usr/share/emacs/site-lisp" t)
+
+;; Go (golang.org), 2011-05-26
+(add-to-list 'load-path "~/software/go/misc/emacs" t)
+(require 'go-mode-load)
 
 (setq Info-additional-directory-list '("~/.emacs.d/usr/share/info"
                                        "~/software/usr/share/info"))
