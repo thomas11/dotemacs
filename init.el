@@ -408,6 +408,10 @@ line."
 (require 'writegood-mode)
 
 
+;; 2011-08-07 https://github.com/rooney/zencoding
+(require 'zencoding-mode)
+
+
 ;; Markdown mode from http://jblevins.org/projects/markdown-mode/ for 
 ;; http://daringfireball.net/projects/markdown/, 2009-06-20
 (autoload 'markdown-mode "markdown-mode.el"
