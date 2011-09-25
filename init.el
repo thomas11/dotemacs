@@ -250,12 +250,14 @@ of comment-dwim, when it inserts comment at the end of the line."
 
 ;; 2010-03-11
 ;; http://stackoverflow.com/questions/2416655/file-path-to-clipboard-in-emacs
-(defun my-buffer-file-name-on-clipboard ()
+(defun my-buffer-file-name-on-clipboard (&optional file-only-p)
   "Put the current file name on the clipboard"
-  (interactive)
+  (interactive "P")
   (let ((filename (if (equal major-mode 'dired-mode)
                       default-directory
-                    (buffer-file-name))))
+                    (if file-only-p
+                        (file-name-nondirectory (buffer-file-name))
+                      (buffer-file-name)))))
     (when filename
       (let ((x-select-enable-clipboard t)) (kill-new filename))
       (message filename))))
